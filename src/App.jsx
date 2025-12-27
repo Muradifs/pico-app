@@ -149,11 +149,31 @@ const PicoLogo = ({ size = 40, className = "" }) => (
 );
 
 const PicoApp = ({ isNodeRunning }) => {
+  // STATE with LocalStorage Persistence
   const [activeTab, setActiveTab] = useState('mine');
-  const [balance, setBalance] = useState(12500.00);
-  const [energy, setEnergy] = useState(85);
+  
+  // Load saved balance or default to 12500
+  const [balance, setBalance] = useState(() => {
+    const saved = localStorage.getItem('pico_balance');
+    return saved ? parseFloat(saved) : 12500.00;
+  });
+
+  // Load saved energy or default to 85
+  const [energy, setEnergy] = useState(() => {
+    const saved = localStorage.getItem('pico_energy');
+    return saved ? parseInt(saved) : 85;
+  });
+
   const [kycStatus, setKycStatus] = useState('verified');
   const [language, setLanguage] = useState('en');
+  
+  // Load saved username
+  const [username, setUsername] = useState(() => {
+    return localStorage.getItem('pico_username') || 'Guest';
+  });
+  
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  
   const t = (key) => TRANSLATIONS[language][key] || key;
 
   // Calculate Rate
@@ -162,6 +182,13 @@ const PicoApp = ({ isNodeRunning }) => {
   if (isNodeRunning) miningRate *= NODE_BOOST; // Apply connection boost
 
   const formatPico = (num) => new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(num);
+
+  // SAVE STATE ON CHANGE
+  useEffect(() => {
+    localStorage.setItem('pico_balance', balance);
+    localStorage.setItem('pico_energy', energy);
+    localStorage.setItem('pico_username', username);
+  }, [balance, energy, username]);
 
   const handleMine = () => {
     if (energy < 10) return;
@@ -173,6 +200,34 @@ const PicoApp = ({ isNodeRunning }) => {
     const timer = setInterval(() => {
       setEnergy(prev => Math.min(prev + 1, 100));
     }, 1000);
+
+    // --- PI SDK INTEGRATION ---
+    const initPi = async () => {
+      if (window.Pi) {
+        try {
+          // Initialize
+          window.Pi.init({ version: "2.0", sandbox: true }); 
+          
+          // Authenticate
+          const scopes = ['username', 'payments'];
+          const onIncompletePaymentFound = (payment) => { console.log("Incomplete Payment", payment); };
+
+          window.Pi.authenticate(scopes, onIncompletePaymentFound).then(function(auth) {
+            console.log("Auth successful", auth);
+            setUsername(auth.user.username);
+            setIsAuthenticated(true);
+          }).catch(function(error) {
+            console.error("Auth failed", error);
+          });
+        } catch (err) {
+          console.error("Pi Init Error", err);
+        }
+      }
+    };
+
+    // Attempt init
+    initPi();
+
     return () => clearInterval(timer);
   }, []);
 
@@ -182,7 +237,10 @@ const PicoApp = ({ isNodeRunning }) => {
       <div className="bg-slate-800/80 backdrop-blur p-4 flex justify-between items-center border-b border-slate-700 z-10">
         <div className="flex items-center gap-2">
            <div className="bg-indigo-600 w-8 h-8 rounded-full flex items-center justify-center text-white font-bold">P</div>
-           <div className="text-white font-bold text-sm">PiCo Network</div>
+           <div className="flex flex-col">
+             <div className="text-white font-bold text-sm">PiCo Network</div>
+             <div className="text-[10px] text-slate-400">Hi, {username}</div>
+           </div>
         </div>
         <div className="bg-slate-900 px-3 py-1 rounded-full border border-slate-700 flex items-center gap-2">
            <Zap size={12} className="text-yellow-400 fill-yellow-400" />
@@ -206,6 +264,7 @@ const PicoApp = ({ isNodeRunning }) => {
             <div className="mt-6 text-center">
                <div className="text-3xl font-bold text-white font-mono">+{formatPico(miningRate)}</div>
                <div className="text-xs text-slate-400 uppercase tracking-widest">Pico / Tap</div>
+               {!isAuthenticated && window.Pi && <div className="text-[10px] text-indigo-400 mt-2 animate-pulse">Connecting to Pi Network...</div>}
             </div>
          </div>
 
