@@ -6,8 +6,28 @@ import {
   Clock, Check, Loader2, Wallet, Map, PieChart, Info, Smartphone, Monitor, ChevronRight
 } from 'lucide-react';
 
+// --- FIREBASE IMPORTS ---
+import { initializeApp } from 'firebase/app';
+import { 
+  getAuth, 
+  signInAnonymously, 
+  onAuthStateChanged,
+  signInWithCustomToken 
+} from 'firebase/auth';
+import { 
+  getFirestore, 
+  doc, 
+  getDoc, 
+  setDoc, 
+  updateDoc, 
+  arrayUnion, 
+  increment,
+  onSnapshot, 
+  collection
+} from 'firebase/firestore';
+
 // ==========================================
-// 1. GLOBALNA KONFIGURACIJA
+// 1. GLOBALNA KONFIGURACIJA & BACKEND SETUP
 // ==========================================
 const ENERGY_MAX = 100;
 const ENERGY_REGEN_PER_SECOND = 0.5; 
@@ -15,10 +35,20 @@ const DAILY_BONUS = 1.0;
 const REFERRAL_BONUS = 5.0;
 const KYC_BONUS = 10.0;
 const KYC_MINING_BOOST = 0.5;
-const NODE_MULTIPLIER = 4.0; // Node povećava rudarenje 4x
+const NODE_MULTIPLIER = 4.0;
 const MAX_SUPPLY = 100000000;
 
-// --- TRANSLATIONS (Sve jezici iz tvog koda) ---
+// --- FIREBASE INIT ---
+const firebaseConfig = JSON.parse(__firebase_config);
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+// FIX: Sanitize appId to ensure valid Firestore path (remove slashes)
+const appIdRaw = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+const appId = appIdRaw.replace(/[^a-zA-Z0-9_-]/g, '_');
+
+// --- TRANSLATIONS ---
 const TRANSLATIONS = {
   en: {
     welcome: "Welcome", mine: "Mine", social: "Social", market: "Market", home: "Home", connect_wallet: "Click Logo to Enter", energy: "Energy", balance: "Balance", start_mining: "Start Mining Session", tap_mine: "Tap to Mine", cost_energy: "Cost: 10 Energy / Click", invite_friends: "Referral Team", buy: "Buy", tip: "Tip", like: "Like", post_placeholder: "What's happening in Pi Network?", items: "items", miner_level: "Pioneer Level", power: "Mining Rate", active_quests: "Checklist", claim: "Claim", leaderboard: "Leaderboard", top_miners: "Top Pioneers", transactions: "History", settings: "Settings", profile: "Pi Profile", language: "Language", change_name: "Verified Name", save: "Save", mined: "Mined", bought: "Bought", reward: "Reward", sent_tip: "Sent Tip", total_supply: "Total Supply", circulating: "Network Share", my_inventory: "Assets", insufficient_funds: "Insufficient funds!", wallet_connected: "Authenticated!", quest_completed: "Quest Completed!", post_published: "Post published!", item_bought: "You bought", tip_sent: "You sent a tip", pi_login_desc: "Authenticate to access the ecosystem.", kyc_status: "KYC Status", kyc_not_started: "Not Started", kyc_pending: "Pending Review", kyc_verified: "Verified ✅", kyc_start: "Start KYC Verification", kyc_simulating: "Verifying...", kyc_completed: "KYC Verified! +10 PiCo", mining_boost_kyc: "KYC Boost", enter_referral: "Referral Code", referral_bonus: "Referral Bonus", node_active: "Node Active"
@@ -26,7 +56,6 @@ const TRANSLATIONS = {
   hr: {
     welcome: "Dobrodošli", mine: "Rudari", social: "Društvo", market: "Trgovina", home: "Dom", connect_wallet: "Klikni Logo za Ulaz", energy: "Energija", balance: "Stanje", start_mining: "Započni Rudarenje", tap_mine: "Dodirni za Rudarenje", cost_energy: "Cijena: 10 Energije / Klik", invite_friends: "Referalni Tim", buy: "Kupi", tip: "Napojnica", like: "Sviđa mi se", post_placeholder: "Što se događa u Pi mreži?", items: "predmeta", miner_level: "Pioneer Razina", power: "Stopa Rudarenja", active_quests: "Lista Zadataka", claim: "Preuzmi", leaderboard: "Ljestvica", top_miners: "Najbolji Pioniri", transactions: "Povijest", settings: "Postavke", profile: "Pi Profil", language: "Jezik", change_name: "Verificirano Ime", save: "Spremi", mined: "Izrudareno", bought: "Kupljeno", reward: "Nagrada", sent_tip: "Poslana napojnica", total_supply: "Ukupna Zaliha", circulating: "Udio Mreže", my_inventory: "Imovina", insufficient_funds: "Nedovoljno sredstava!", wallet_connected: "Autentificirano!", quest_completed: "Zadatak Rješen!", post_published: "Objava uspješna!", item_bought: "Kupili ste", tip_sent: "Poslali ste napojnicu", pi_login_desc: "Prijavite se za pristup ekosustavu.", kyc_status: "KYC Status", kyc_not_started: "Nije započeto", kyc_pending: "Na pregledu", kyc_verified: "Verificirano ✅", kyc_start: "Započni KYC", kyc_simulating: "Provjeravam...", kyc_completed: "KYC Verificiran! +10 PiCo", mining_boost_kyc: "KYC Boost", enter_referral: "Referral Kod", referral_bonus: "Referral Bonus", node_active: "Čvor Aktivan"
   }
-  // (Ostali jezici su podržani logikom, ovdje skraćeno radi preglednosti)
 };
 
 const LANGUAGES = [
@@ -35,7 +64,6 @@ const LANGUAGES = [
   { code: 'de', label: 'Deutsch', flag: '🇩🇪' },
 ];
 
-// --- MOCK PODACI ---
 const MARKET_ITEMS = [
   { id: 1, name: 'Titanium Pickaxe', price: 15.0, icon: '⛏️', desc: '+0.1 Mining Power' },
   { id: 2, name: 'Energy Drink', price: 5.0, icon: '⚡', desc: 'Full Energy Restore' },
@@ -86,60 +114,76 @@ const PicoLogo = ({ size = 40, className = "" }) => (
   </svg>
 );
 
-const SettingsModal = ({ onClose, t, language, setLanguage, userAvatar, username, referralCode, triggerNotification, kycStatus, isKycProcessing, startKyc, transactions }) => (
-  <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-    <div className="bg-slate-900 w-full max-w-md rounded-2xl border border-slate-700 shadow-2xl overflow-hidden max-h-[85vh] flex flex-col">
-      <div className="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900/50">
-        <h2 className="font-bold text-xl text-white flex items-center gap-2"><Settings size={20} /> {t('settings')}</h2>
-        <button onClick={onClose} className="p-2 hover:bg-slate-800 rounded-full text-slate-400"><X size={20}/></button>
-      </div>
-      <div className="p-4 space-y-6 overflow-y-auto">
-        <div className="flex gap-3 items-center bg-slate-800/50 p-3 rounded-xl border border-slate-700">
-           <div className="w-12 h-12 flex items-center justify-center text-2xl bg-indigo-600/20 rounded-full text-yellow-400 border border-indigo-500/30">{userAvatar}</div>
-           <div className="flex-1">
-             <p className="text-xs text-slate-500 uppercase">{t('profile')}</p>
-             <p className="text-lg font-bold text-white flex items-center gap-2">{username} <CheckCircle2 size={16} className="text-green-500" /></p>
-           </div>
-        </div>
-        
-        {/* KYC Section */}
-        <div className="bg-slate-800/50 p-4 rounded-xl border border-slate-700 space-y-3">
-           <div className="flex justify-between items-center">
-              <h3 className="text-xs font-bold text-slate-500 uppercase">{t('kyc_status')}</h3>
-              <span className={`flex items-center gap-1 text-sm font-bold ${getKycColor(kycStatus)}`}>
-                {getKycIcon(kycStatus, isKycProcessing)} {t(kycStatus === 'not_started' ? 'kyc_not_started' : kycStatus === 'pending' ? 'kyc_pending' : 'kyc_verified')}
-              </span>
-           </div>
-           {kycStatus === 'not_started' && (
-             <button onClick={startKyc} disabled={isKycProcessing} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg text-sm transition">{t('kyc_start')}</button>
-           )}
-        </div>
+const SettingsModal = ({ onClose, t, language, setLanguage, userAvatar, username, referralCode, triggerNotification, kycStatus, isKycProcessing, startKyc, transactions }) => {
+  // Helper to safely format date whether it's a Firestore Timestamp, Date object, or string
+  const formatTime = (dateVal) => {
+    if (!dateVal) return '';
+    try {
+      if (dateVal.toDate) return dateVal.toDate().toLocaleTimeString();
+      return new Date(dateVal).toLocaleTimeString();
+    } catch (e) {
+      return '';
+    }
+  };
 
-        {/* Language */}
-        <div className="grid grid-cols-2 gap-2">
-           {LANGUAGES.map(lang => (
-             <button key={lang.code} onClick={() => setLanguage(lang.code)} className={`flex items-center gap-2 p-2 rounded-lg border transition-all ${language === lang.code ? 'bg-indigo-600/20 border-indigo-500 text-white' : 'bg-slate-800 border-slate-700 text-slate-400'}`}>
-               <span className="text-xl">{lang.flag}</span><span className="text-sm font-medium">{lang.label}</span>
-             </button>
-           ))}
+  return (
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-slate-900 w-full max-w-md rounded-2xl border border-slate-700 shadow-2xl overflow-hidden max-h-[85vh] flex flex-col">
+        <div className="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900/50">
+          <h2 className="font-bold text-xl text-white flex items-center gap-2"><Settings size={20} /> {t('settings')}</h2>
+          <button onClick={onClose} className="p-2 hover:bg-slate-800 rounded-full text-slate-400"><X size={20}/></button>
         </div>
+        <div className="p-4 space-y-6 overflow-y-auto">
+          <div className="flex gap-3 items-center bg-slate-800/50 p-3 rounded-xl border border-slate-700">
+             <div className="w-12 h-12 flex items-center justify-center text-2xl bg-indigo-600/20 rounded-full text-yellow-400 border border-indigo-500/30">{userAvatar}</div>
+             <div className="flex-1">
+               <p className="text-xs text-slate-500 uppercase">{t('profile')}</p>
+               <p className="text-lg font-bold text-white flex items-center gap-2">{username} <CheckCircle2 size={16} className="text-green-500" /></p>
+             </div>
+          </div>
+          
+          {/* KYC Section */}
+          <div className="bg-slate-800/50 p-4 rounded-xl border border-slate-700 space-y-3">
+             <div className="flex justify-between items-center">
+                <h3 className="text-xs font-bold text-slate-500 uppercase">{t('kyc_status')}</h3>
+                <span className={`flex items-center gap-1 text-sm font-bold ${getKycColor(kycStatus)}`}>
+                  {getKycIcon(kycStatus, isKycProcessing)} {t(kycStatus === 'not_started' ? 'kyc_not_started' : kycStatus === 'pending' ? 'kyc_pending' : 'kyc_verified')}
+                </span>
+             </div>
+             {kycStatus === 'not_started' && (
+               <button onClick={startKyc} disabled={isKycProcessing} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg text-sm transition">{t('kyc_start')}</button>
+             )}
+          </div>
 
-        {/* Transactions */}
-        <div className="space-y-2">
-           <h3 className="text-xs font-bold text-slate-500 uppercase">{t('transactions')}</h3>
-           <div className="bg-slate-900 rounded-xl border border-slate-700 p-2 max-h-40 overflow-y-auto space-y-2">
-             {transactions.map(tx => (
-               <div key={tx.id} className="flex justify-between items-center text-xs p-2 rounded hover:bg-slate-800">
-                 <span className="font-medium text-slate-300">{t(tx.descKey)}</span>
-                 <span className={`font-mono font-bold ${tx.type === 'income' ? 'text-green-400' : 'text-red-400'}`}>{tx.type === 'income' ? '+' : '-'}{tx.amount.toFixed(2)}</span>
-               </div>
+          {/* Language */}
+          <div className="grid grid-cols-2 gap-2">
+             {LANGUAGES.map(lang => (
+               <button key={lang.code} onClick={() => setLanguage(lang.code)} className={`flex items-center gap-2 p-2 rounded-lg border transition-all ${language === lang.code ? 'bg-indigo-600/20 border-indigo-500 text-white' : 'bg-slate-800 border-slate-700 text-slate-400'}`}>
+                 <span className="text-xl">{lang.flag}</span><span className="text-sm font-medium">{lang.label}</span>
+               </button>
              ))}
-           </div>
+          </div>
+
+          {/* Transactions */}
+          <div className="space-y-2">
+             <h3 className="text-xs font-bold text-slate-500 uppercase">{t('transactions')}</h3>
+             <div className="bg-slate-900 rounded-xl border border-slate-700 p-2 max-h-40 overflow-y-auto space-y-2">
+               {transactions && transactions.length > 0 ? transactions.map(tx => (
+                 <div key={tx.id} className="flex justify-between items-center text-xs p-2 rounded hover:bg-slate-800">
+                   <span className="font-medium text-slate-300">{t(tx.descKey)}</span>
+                   <div className="text-right">
+                     <span className={`font-mono font-bold block ${tx.type === 'income' ? 'text-green-400' : 'text-red-400'}`}>{tx.type === 'income' ? '+' : '-'}{tx.amount.toFixed(2)}</span>
+                     <span className="text-[9px] text-slate-500">{formatTime(tx.date)}</span>
+                   </div>
+                 </div>
+               )) : <div className="text-slate-500 text-center py-2">No transactions</div>}
+             </div>
+          </div>
         </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 // ==========================================
 // 3. NODE SIMULATOR (Lijeva strana)
@@ -164,7 +208,6 @@ const NodeSimulator = ({ onStatusChange, isActive }) => {
 
   const toggleNode = () => {
     if (isActive) {
-      // Logic handled by parent prop mainly, this handles visual
       if(dockerStatus === 'STOPPED') {
         setDockerStatus('STARTING');
         addLog('Initializing Pi Node (Docker Container)...', 'info');
@@ -221,24 +264,30 @@ const NodeSimulator = ({ onStatusChange, isActive }) => {
 // 4. PICO APP (Desna strana - Integrirana)
 // ==========================================
 const PicoApp = ({ isNodeRunning }) => {
-  // --- STATE ---
+  // --- AUTH STATE ---
+  const [firebaseUser, setFirebaseUser] = useState(null);
+  
+  // --- APP STATE ---
   const [activeTab, setActiveTab] = useState('dashboard');
   const [walletConnected, setWalletConnected] = useState(false);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
-  const [username, setUsername] = useState('Guest');
-  const [userAvatar, setUserAvatar] = useState('👤');
+  const userAvatar = '👤'; // Define simple avatar for now
   
-  // Economy State (LocalStorage)
-  const [balance, setBalance] = useState(() => parseFloat(localStorage.getItem('pico_balance')) || 0);
-  const [energy, setEnergy] = useState(() => parseInt(localStorage.getItem('pico_energy')) || ENERGY_MAX);
-  const [baseMiningPower, setBaseMiningPower] = useState(0.25);
-  const [inventory, setInventory] = useState([]);
-  const [transactions, setTransactions] = useState([]);
-  const [quests, setQuests] = useState(QUESTS_DATA);
-  
+  // Data State
+  const [userData, setUserData] = useState({
+    username: 'Guest',
+    balance: 0,
+    energy: ENERGY_MAX,
+    baseMiningPower: 0.25,
+    inventory: [],
+    transactions: [],
+    quests: QUESTS_DATA,
+    kycStatus: 'not_started',
+    referralCode: ''
+  });
+
   // UI State
   const [language, setLanguage] = useState('hr');
-  const [kycStatus, setKycStatus] = useState('not_started');
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showNotification, setShowNotification] = useState(null);
   const [posts, setPosts] = useState([{id:1, user:'PiCoreTeam', avatar:'π', content:'Welcome to the new ecosystem!', likes:999, tips:50}]);
@@ -249,56 +298,160 @@ const PicoApp = ({ isNodeRunning }) => {
 
   // --- LOGIC ---
   const effectiveMiningPower = Number((
-    (baseMiningPower + (kycStatus === 'verified' ? KYC_MINING_BOOST : 0)) * (isNodeRunning ? NODE_MULTIPLIER : 1)
+    (userData.baseMiningPower + (userData.kycStatus === 'verified' ? KYC_MINING_BOOST : 0)) * (isNodeRunning ? NODE_MULTIPLIER : 1)
   ).toFixed(2));
 
-  // Persistence
+  // --- FIREBASE AUTH & SYNC ---
   useEffect(() => {
-    localStorage.setItem('pico_balance', balance);
-    localStorage.setItem('pico_energy', energy);
-  }, [balance, energy]);
+    // 1. Auth Init
+    const initAuth = async () => {
+      if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+        await signInWithCustomToken(auth, __initial_auth_token);
+      } else {
+        await signInAnonymously(auth);
+      }
+    };
+    initAuth();
 
-  // Energy Regen
-  useEffect(() => {
-    const timer = setInterval(() => setEnergy(p => Math.min(p + ENERGY_REGEN_PER_SECOND, ENERGY_MAX)), 1000);
-    return () => clearInterval(timer);
+    // 2. Auth Listener
+    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        setFirebaseUser(user);
+      }
+    });
+    return () => unsubscribeAuth();
   }, []);
 
+  // 3. Realtime Data Sync
+  useEffect(() => {
+    if (!firebaseUser) return;
+    
+    // Using sanitized appId
+    const userDocRef = doc(db, 'artifacts', appId, 'users', firebaseUser.uid, 'data', 'profile');
+    
+    const unsubscribeSnapshot = onSnapshot(userDocRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        setUserData(prev => ({ ...prev, ...data }));
+        setWalletConnected(true); // Auto-login if data exists
+      }
+    });
+
+    return () => unsubscribeSnapshot();
+  }, [firebaseUser]);
+
+  // 4. Energy Regen (Local + Sync)
+  useEffect(() => {
+    if(!walletConnected) return;
+    const timer = setInterval(() => {
+        if(userData.energy < ENERGY_MAX) {
+            const newEnergy = Math.min(userData.energy + ENERGY_REGEN_PER_SECOND, ENERGY_MAX);
+            setUserData(prev => ({...prev, energy: newEnergy}));
+        }
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [walletConnected, userData.energy]);
+
+
+  // --- ACTIONS ---
   const triggerNotification = (msg) => {
     setShowNotification(msg);
     setTimeout(() => setShowNotification(null), 3000);
   };
 
   const connectWallet = async () => {
+    if(!firebaseUser) return;
     setIsAuthenticating(true);
-    setTimeout(() => {
-        // Mock Pi SDK Auth
-        setUsername("PiUser_" + Math.floor(Math.random()*1000));
-        setUserAvatar('🥧');
-        setWalletConnected(true);
-        setIsAuthenticating(false);
-        if(balance === 0) {
-            setBalance(1.0);
+    
+    // Simulate Pi SDK delay
+    setTimeout(async () => {
+        // Mock Pi Username
+        const piUsername = "PiUser_" + Math.floor(Math.random()*1000);
+        const newUserData = {
+            username: piUsername,
+            balance: 1.0, // Welcome bonus
+            energy: ENERGY_MAX,
+            baseMiningPower: 0.25,
+            kycStatus: 'not_started',
+            referralCode: 'REF' + Math.floor(Math.random()*10000),
+            transactions: [] // Ensure transactions array exists
+        };
+
+        // Create initial doc in Firestore
+        const userDocRef = doc(db, 'artifacts', appId, 'users', firebaseUser.uid, 'data', 'profile');
+        
+        // Check if exists first to not overwrite
+        const docSnap = await getDoc(userDocRef);
+        if(!docSnap.exists()) {
+            await setDoc(userDocRef, newUserData);
             triggerNotification("Welcome Bonus: +1.0 PiCo");
         }
+        
+        setWalletConnected(true);
+        setIsAuthenticating(false);
     }, 1500);
   };
 
-  const handleMine = () => {
-    if (energy < 10) { triggerNotification(t('cost_energy')); return; }
-    setEnergy(p => p - 10);
-    const mined = effectiveMiningPower;
-    setBalance(p => p + mined);
-    triggerNotification(`+${mined.toFixed(2)} PiCo`);
+  const updateRemoteState = async (updates) => {
+      if(!firebaseUser) return;
+      const userDocRef = doc(db, 'artifacts', appId, 'users', firebaseUser.uid, 'data', 'profile');
+      await updateDoc(userDocRef, updates);
   };
 
-  const startKyc = () => {
-      setKycStatus('pending');
+  const handleMine = async () => {
+    if (userData.energy < 10) { triggerNotification(t('cost_energy')); return; }
+    
+    const mined = effectiveMiningPower;
+    const newBalance = userData.balance + mined;
+    const newEnergy = userData.energy - 10;
+
+    // Optimistic Update
+    setUserData(prev => ({...prev, balance: newBalance, energy: newEnergy}));
+    triggerNotification(`+${mined.toFixed(2)} PiCo`);
+
+    // Sync to DB
+    await updateRemoteState({
+        balance: increment(mined),
+        energy: newEnergy
+    });
+  };
+
+  const buyItem = async (item) => {
+      if(userData.balance >= item.price) {
+          const newBalance = userData.balance - item.price;
+          setUserData(prev => ({...prev, balance: newBalance})); // Optimistic
+          triggerNotification("Bought " + item.name);
+          
+          let updates = { balance: newBalance };
+          if(item.id === 2) updates.energy = ENERGY_MAX;
+          
+          // Log transaction
+          const newTx = {
+              id: Date.now(),
+              type: 'expense',
+              amount: item.price,
+              descKey: 'item_bought',
+              date: new Date() // Will be saved as Timestamp in Firestore
+          };
+          updates.transactions = arrayUnion(newTx);
+          
+          await updateRemoteState(updates);
+      } else {
+          triggerNotification(t('insufficient_funds'));
+      }
+  };
+
+  const startKyc = async () => {
+      setUserData(prev => ({...prev, kycStatus: 'pending'}));
       triggerNotification(t('kyc_simulating'));
-      setTimeout(() => {
-          setKycStatus('verified');
+      
+      // Simulate backend process
+      setTimeout(async () => {
+          await updateRemoteState({
+              kycStatus: 'verified',
+              balance: increment(KYC_BONUS)
+          });
           triggerNotification(t('kyc_completed'));
-          setBalance(b => b + KYC_BONUS);
       }, 3000);
   };
 
@@ -327,7 +480,7 @@ const PicoApp = ({ isNodeRunning }) => {
     <div className="h-full bg-slate-900 text-white flex flex-col font-sans relative overflow-hidden">
       
       {/* MODALS */}
-      {showProfileModal && <SettingsModal onClose={() => setShowProfileModal(false)} t={t} language={language} setLanguage={setLanguage} userAvatar={userAvatar} username={username} referralCode="REF123" triggerNotification={triggerNotification} kycStatus={kycStatus} startKyc={startKyc} transactions={transactions} />}
+      {showProfileModal && <SettingsModal onClose={() => setShowProfileModal(false)} t={t} language={language} setLanguage={setLanguage} userAvatar={userAvatar} username={userData.username} referralCode={userData.referralCode} triggerNotification={triggerNotification} kycStatus={userData.kycStatus} startKyc={startKyc} transactions={userData.transactions} />}
       {showNotification && <div className="absolute top-20 left-1/2 -translate-x-1/2 bg-indigo-600 px-4 py-2 rounded-full shadow-lg z-50 text-sm font-bold flex items-center gap-2 animate-in slide-in-from-top-2"><CheckCircle2 size={16}/> {showNotification}</div>}
 
       {/* HEADER */}
@@ -336,12 +489,12 @@ const PicoApp = ({ isNodeRunning }) => {
             <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center border border-slate-700" onClick={() => setShowProfileModal(true)}>{userAvatar}</div>
             <div className="flex flex-col">
                <span className="text-xs text-slate-400 font-bold">{t('energy')}</span>
-               <div className="w-20 h-1.5 bg-slate-800 rounded-full overflow-hidden"><div className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 transition-all duration-500" style={{width: `${energy}%`}}></div></div>
+               <div className="w-20 h-1.5 bg-slate-800 rounded-full overflow-hidden"><div className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 transition-all duration-500" style={{width: `${userData.energy}%`}}></div></div>
             </div>
          </div>
          <div className="bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-700 flex items-center gap-2">
             <Zap size={14} className="text-yellow-400 fill-yellow-400" />
-            <span className="font-mono font-bold">{balance.toFixed(2)}</span>
+            <span className="font-mono font-bold">{userData.balance.toFixed(2)}</span>
          </div>
       </header>
 
@@ -410,7 +563,7 @@ const PicoApp = ({ isNodeRunning }) => {
          {activeTab === 'market' && (
             <div className="grid grid-cols-2 gap-3">
                {MARKET_ITEMS.map(item => (
-                  <div key={item.id} onClick={() => {if(balance >= item.price) {setBalance(b => b-item.price); triggerNotification("Bought " + item.name);}}} className="bg-slate-800 p-3 rounded-xl border border-slate-700 flex flex-col items-center text-center hover:border-indigo-500 cursor-pointer transition-colors">
+                  <div key={item.id} onClick={() => buyItem(item)} className="bg-slate-800 p-3 rounded-xl border border-slate-700 flex flex-col items-center text-center hover:border-indigo-500 cursor-pointer transition-colors">
                      <div className="text-3xl mb-2">{item.icon}</div>
                      <div className="font-bold text-xs mb-1">{item.name}</div>
                      <div className="text-yellow-400 font-mono text-xs font-bold">{item.price} PiCo</div>
@@ -424,7 +577,7 @@ const PicoApp = ({ isNodeRunning }) => {
                <div className="bg-slate-800 p-3 rounded-xl border border-slate-700 flex gap-2">
                   <div className="w-8 h-8 rounded-full bg-indigo-900 flex items-center justify-center">{userAvatar}</div>
                   <input value={newPostContent} onChange={(e)=>setNewPostContent(e.target.value)} placeholder={t('post_placeholder')} className="bg-transparent flex-1 text-sm outline-none placeholder-slate-500"/>
-                  <button onClick={()=>{if(newPostContent){setPosts([{id:Date.now(), user:username, avatar:userAvatar, content:newPostContent, likes:0, tips:0}, ...posts]); setNewPostContent('');}}}><Send size={16} className="text-indigo-400"/></button>
+                  <button onClick={()=>{if(newPostContent){setPosts([{id:Date.now(), user:userData.username, avatar:userAvatar, content:newPostContent, likes:0, tips:0}, ...posts]); setNewPostContent('');}}}><Send size={16} className="text-indigo-400"/></button>
                </div>
                {posts.map(post => (
                   <div key={post.id} className="bg-slate-800 p-4 rounded-xl border border-slate-700 space-y-2">
