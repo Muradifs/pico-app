@@ -1,3 +1,7 @@
+/* STARI v3 način */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* NOVI v4 način */
+@import "tailwindcss";
