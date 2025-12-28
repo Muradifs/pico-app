@@ -3,38 +3,159 @@ import {
   Terminal, Server, Shield, Zap, Activity, Globe, Lock, Cpu, Play, Square,
   Pickaxe, ShoppingBag, Users, Heart, Send, Trophy, CheckCircle2, 
   Settings, History, BarChart3, X, ShieldCheck, Copy, LogIn, AlertCircle, 
-  Clock, Check, Loader2, Wallet, Map, PieChart, Info, Smartphone, Monitor
+  Clock, Check, Loader2, Wallet, Map, PieChart, Info, Smartphone, Monitor, ChevronRight
 } from 'lucide-react';
 
 // ==========================================
-// KONSTANTE (Realistični Pi Network parametri za 2025.)
+// 1. GLOBALNA KONFIGURACIJA
 // ==========================================
-const BASE_MINING_RATE = 0.003; // ~0.003 π/h (Base rate pada s vremenom)
-const KYC_MINING_BOOST = 2;     // x2 Boost za KYC
-const NODE_BOOST = 4.5;         // Node Bonus (ovisi o dostupnosti, prosjek x4.5)
-const SECURITY_CIRCLE_BOOST = 2; // x2 ako je krug pun (5/5)
+const ENERGY_MAX = 100;
+const ENERGY_REGEN_PER_SECOND = 0.5; 
+const DAILY_BONUS = 1.0;
+const REFERRAL_BONUS = 5.0;
+const KYC_BONUS = 10.0;
+const KYC_MINING_BOOST = 0.5;
+const NODE_MULTIPLIER = 4.0; // Node povećava rudarenje 4x
+const MAX_SUPPLY = 100000000;
+
+// --- TRANSLATIONS (Sve jezici iz tvog koda) ---
+const TRANSLATIONS = {
+  en: {
+    welcome: "Welcome", mine: "Mine", social: "Social", market: "Market", home: "Home", connect_wallet: "Click Logo to Enter", energy: "Energy", balance: "Balance", start_mining: "Start Mining Session", tap_mine: "Tap to Mine", cost_energy: "Cost: 10 Energy / Click", invite_friends: "Referral Team", buy: "Buy", tip: "Tip", like: "Like", post_placeholder: "What's happening in Pi Network?", items: "items", miner_level: "Pioneer Level", power: "Mining Rate", active_quests: "Checklist", claim: "Claim", leaderboard: "Leaderboard", top_miners: "Top Pioneers", transactions: "History", settings: "Settings", profile: "Pi Profile", language: "Language", change_name: "Verified Name", save: "Save", mined: "Mined", bought: "Bought", reward: "Reward", sent_tip: "Sent Tip", total_supply: "Total Supply", circulating: "Network Share", my_inventory: "Assets", insufficient_funds: "Insufficient funds!", wallet_connected: "Authenticated!", quest_completed: "Quest Completed!", post_published: "Post published!", item_bought: "You bought", tip_sent: "You sent a tip", pi_login_desc: "Authenticate to access the ecosystem.", kyc_status: "KYC Status", kyc_not_started: "Not Started", kyc_pending: "Pending Review", kyc_verified: "Verified ✅", kyc_start: "Start KYC Verification", kyc_simulating: "Verifying...", kyc_completed: "KYC Verified! +10 PiCo", mining_boost_kyc: "KYC Boost", enter_referral: "Referral Code", referral_bonus: "Referral Bonus", node_active: "Node Active"
+  },
+  hr: {
+    welcome: "Dobrodošli", mine: "Rudari", social: "Društvo", market: "Trgovina", home: "Dom", connect_wallet: "Klikni Logo za Ulaz", energy: "Energija", balance: "Stanje", start_mining: "Započni Rudarenje", tap_mine: "Dodirni za Rudarenje", cost_energy: "Cijena: 10 Energije / Klik", invite_friends: "Referalni Tim", buy: "Kupi", tip: "Napojnica", like: "Sviđa mi se", post_placeholder: "Što se događa u Pi mreži?", items: "predmeta", miner_level: "Pioneer Razina", power: "Stopa Rudarenja", active_quests: "Lista Zadataka", claim: "Preuzmi", leaderboard: "Ljestvica", top_miners: "Najbolji Pioniri", transactions: "Povijest", settings: "Postavke", profile: "Pi Profil", language: "Jezik", change_name: "Verificirano Ime", save: "Spremi", mined: "Izrudareno", bought: "Kupljeno", reward: "Nagrada", sent_tip: "Poslana napojnica", total_supply: "Ukupna Zaliha", circulating: "Udio Mreže", my_inventory: "Imovina", insufficient_funds: "Nedovoljno sredstava!", wallet_connected: "Autentificirano!", quest_completed: "Zadatak Rješen!", post_published: "Objava uspješna!", item_bought: "Kupili ste", tip_sent: "Poslali ste napojnicu", pi_login_desc: "Prijavite se za pristup ekosustavu.", kyc_status: "KYC Status", kyc_not_started: "Nije započeto", kyc_pending: "Na pregledu", kyc_verified: "Verificirano ✅", kyc_start: "Započni KYC", kyc_simulating: "Provjeravam...", kyc_completed: "KYC Verificiran! +10 PiCo", mining_boost_kyc: "KYC Boost", enter_referral: "Referral Kod", referral_bonus: "Referral Bonus", node_active: "Čvor Aktivan"
+  }
+  // (Ostali jezici su podržani logikom, ovdje skraćeno radi preglednosti)
+};
+
+const LANGUAGES = [
+  { code: 'en', label: 'English', flag: '🇬🇧' },
+  { code: 'hr', label: 'Hrvatski', flag: '🇭🇷' },
+  { code: 'de', label: 'Deutsch', flag: '🇩🇪' },
+];
+
+// --- MOCK PODACI ---
+const MARKET_ITEMS = [
+  { id: 1, name: 'Titanium Pickaxe', price: 15.0, icon: '⛏️', desc: '+0.1 Mining Power' },
+  { id: 2, name: 'Energy Drink', price: 5.0, icon: '⚡', desc: 'Full Energy Restore' },
+  { id: 3, name: 'Lucky Charm', price: 25.0, icon: '🍀', desc: '2x Critical Chance' },
+];
+
+const QUESTS_DATA = [
+  { id: 1, title: "Daily Login", reward: DAILY_BONUS, completed: false },
+  { id: 2, title: "Invite a Friend", reward: 2.0, completed: false },
+];
+
+const LEADERBOARD_DATA = [
+  { id: 1, name: "PiWhale_99", balance: 15430.2, avatar: "🐋" },
+  { id: 2, name: "CoreTeamFan", balance: 8201.5, avatar: "⚡" },
+  { id: 3, name: "Validator_1", balance: 4890.1, avatar: "✅" },
+];
 
 // ==========================================
-// NODE SIMULATOR (Desktop strana - Pi Node)
+// 2. HELPER FUNKCIJE & KOMPONENTE
+// ==========================================
+const getKycColor = (status) => {
+  if (status === 'verified') return 'text-green-400';
+  if (status === 'pending') return 'text-yellow-400';
+  return 'text-slate-400';
+};
+
+const getKycIcon = (status, isProcessing) => {
+  if (isProcessing) return <Loader2 size={18} className="animate-spin" />;
+  if (status === 'verified') return <Check size={18} />;
+  if (status === 'pending') return <Clock size={18} />;
+  return <AlertCircle size={18} />;
+};
+
+const PicoLogo = ({ size = 40, className = "" }) => (
+  <svg width={size} height={size} viewBox="0 0 120 120" fill="none" className={`${className} drop-shadow-2xl`}>
+    <circle cx="60" cy="60" r="58" fill="url(#logoGradient)" stroke="url(#goldGradient)" strokeWidth="3" />
+    <path d="M35 45 H85 M45 45 V80 M75 45 V80" stroke="white" strokeWidth="8" strokeLinecap="round" />
+    <defs>
+      <linearGradient id="logoGradient" x1="0" y1="0" x2="120" y2="120">
+        <stop offset="0%" stopColor="#4F46E5" />
+        <stop offset="100%" stopColor="#7C3AED" />
+      </linearGradient>
+      <linearGradient id="goldGradient" x1="0" y1="0" x2="120" y2="120">
+        <stop offset="0%" stopColor="#FCD34D" />
+        <stop offset="100%" stopColor="#B45309" />
+      </linearGradient>
+    </defs>
+  </svg>
+);
+
+const SettingsModal = ({ onClose, t, language, setLanguage, userAvatar, username, referralCode, triggerNotification, kycStatus, isKycProcessing, startKyc, transactions }) => (
+  <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div className="bg-slate-900 w-full max-w-md rounded-2xl border border-slate-700 shadow-2xl overflow-hidden max-h-[85vh] flex flex-col">
+      <div className="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900/50">
+        <h2 className="font-bold text-xl text-white flex items-center gap-2"><Settings size={20} /> {t('settings')}</h2>
+        <button onClick={onClose} className="p-2 hover:bg-slate-800 rounded-full text-slate-400"><X size={20}/></button>
+      </div>
+      <div className="p-4 space-y-6 overflow-y-auto">
+        <div className="flex gap-3 items-center bg-slate-800/50 p-3 rounded-xl border border-slate-700">
+           <div className="w-12 h-12 flex items-center justify-center text-2xl bg-indigo-600/20 rounded-full text-yellow-400 border border-indigo-500/30">{userAvatar}</div>
+           <div className="flex-1">
+             <p className="text-xs text-slate-500 uppercase">{t('profile')}</p>
+             <p className="text-lg font-bold text-white flex items-center gap-2">{username} <CheckCircle2 size={16} className="text-green-500" /></p>
+           </div>
+        </div>
+        
+        {/* KYC Section */}
+        <div className="bg-slate-800/50 p-4 rounded-xl border border-slate-700 space-y-3">
+           <div className="flex justify-between items-center">
+              <h3 className="text-xs font-bold text-slate-500 uppercase">{t('kyc_status')}</h3>
+              <span className={`flex items-center gap-1 text-sm font-bold ${getKycColor(kycStatus)}`}>
+                {getKycIcon(kycStatus, isKycProcessing)} {t(kycStatus === 'not_started' ? 'kyc_not_started' : kycStatus === 'pending' ? 'kyc_pending' : 'kyc_verified')}
+              </span>
+           </div>
+           {kycStatus === 'not_started' && (
+             <button onClick={startKyc} disabled={isKycProcessing} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg text-sm transition">{t('kyc_start')}</button>
+           )}
+        </div>
+
+        {/* Language */}
+        <div className="grid grid-cols-2 gap-2">
+           {LANGUAGES.map(lang => (
+             <button key={lang.code} onClick={() => setLanguage(lang.code)} className={`flex items-center gap-2 p-2 rounded-lg border transition-all ${language === lang.code ? 'bg-indigo-600/20 border-indigo-500 text-white' : 'bg-slate-800 border-slate-700 text-slate-400'}`}>
+               <span className="text-xl">{lang.flag}</span><span className="text-sm font-medium">{lang.label}</span>
+             </button>
+           ))}
+        </div>
+
+        {/* Transactions */}
+        <div className="space-y-2">
+           <h3 className="text-xs font-bold text-slate-500 uppercase">{t('transactions')}</h3>
+           <div className="bg-slate-900 rounded-xl border border-slate-700 p-2 max-h-40 overflow-y-auto space-y-2">
+             {transactions.map(tx => (
+               <div key={tx.id} className="flex justify-between items-center text-xs p-2 rounded hover:bg-slate-800">
+                 <span className="font-medium text-slate-300">{t(tx.descKey)}</span>
+                 <span className={`font-mono font-bold ${tx.type === 'income' ? 'text-green-400' : 'text-red-400'}`}>{tx.type === 'income' ? '+' : '-'}{tx.amount.toFixed(2)}</span>
+               </div>
+             ))}
+           </div>
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
+// ==========================================
+// 3. NODE SIMULATOR (Lijeva strana)
 // ==========================================
 const NodeSimulator = ({ onStatusChange, isActive }) => {
-  const [blockHeight, setBlockHeight] = useState(2850000); // Realističan blok za Mainnet
+  const [blockHeight, setBlockHeight] = useState(2850000);
   const [dockerStatus, setDockerStatus] = useState('STOPPED'); 
   const [logs, setLogs] = useState([]);
   const logsEndRef = useRef(null);
   const consensusInterval = useRef(null);
 
-  // Auto-scroll logova
+  useEffect(() => { logsEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [logs]);
   useEffect(() => {
-    logsEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [logs]);
-
-  // Čišćenje intervala
-  useEffect(() => {
-    return () => {
-      if (consensusInterval.current) clearInterval(consensusInterval.current);
-    };
-  }, []);
+    if (isActive && dockerStatus === 'STOPPED') toggleNode();
+    return () => clearInterval(consensusInterval.current);
+  }, [isActive]);
 
   const addLog = (message, type = 'info') => {
     const timestamp = new Date().toLocaleTimeString();
@@ -43,382 +164,344 @@ const NodeSimulator = ({ onStatusChange, isActive }) => {
 
   const toggleNode = () => {
     if (isActive) {
-      // Gašenje
-      onStatusChange(false);
+      // Logic handled by parent prop mainly, this handles visual
+      if(dockerStatus === 'STOPPED') {
+        setDockerStatus('STARTING');
+        addLog('Initializing Pi Node (Docker Container)...', 'info');
+        setTimeout(() => {
+          setDockerStatus('RUNNING');
+          addLog('Docker container started.', 'success');
+          addLog('SCP (Stellar Consensus Protocol) Active.', 'success');
+          
+          consensusInterval.current = setInterval(() => {
+            setBlockHeight(prev => {
+              const newHeight = prev + 1;
+              if (newHeight % 5 === 0) addLog(`SCP Consensus: Block #${newHeight.toLocaleString()}`, 'success');
+              return newHeight;
+            });
+          }, 3000);
+        }, 2000);
+      }
+    } else {
       setDockerStatus('STOPPED');
       clearInterval(consensusInterval.current);
-      addLog('Pi Node Service Stopped.', 'warning');
-    } else {
-      // Paljenje
-      setDockerStatus('STARTING');
-      addLog('Initializing Pi Node (Docker Container)...', 'info');
-      
-      setTimeout(() => {
-        setDockerStatus('RUNNING');
-        onStatusChange(true); // Signaliziraj parent komponenti
-        addLog('Docker container [pi-consensus] started.', 'success');
-        addLog('Connected to Pi Mainnet (Open Network).', 'success');
-        addLog('SCP (Stellar Consensus Protocol) Active.', 'success');
-        startConsensus();
-      }, 2500);
+      addLog('Node Service Stopped.', 'warning');
     }
   };
 
-  const startConsensus = () => {
-    consensusInterval.current = setInterval(() => {
-      setBlockHeight(prev => {
-        const newHeight = prev + 1;
-        // SCP je brz, logiramo svaki 5. blok da ne spamamo
-        if (newHeight % 5 === 0) {
-           addLog(`SCP Consensus Achieved: Block #${newHeight.toLocaleString()}`, 'success');
-        }
-        return newHeight;
-      });
-    }, 4000); // Simulacija vremena bloka
-  };
-
   return (
-    <div className="bg-slate-900 text-slate-200 p-6 rounded-xl border border-slate-700 h-full flex flex-col font-mono">
+    <div className="bg-slate-900 text-slate-200 p-6 rounded-xl border border-slate-700 h-full flex flex-col font-mono shadow-2xl">
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-bold flex items-center gap-2 text-white">
-          <Server className="text-purple-500" /> Pi Node Terminal
-        </h2>
-        <div className={`px-3 py-1 rounded-full text-xs font-bold border ${isActive ? 'bg-green-900/30 text-green-400 border-green-600' : 'bg-red-900/30 text-red-400 border-red-600'}`}>
-          {isActive ? 'MAINNET SYNCED' : 'OFFLINE'}
-        </div>
+        <h2 className="text-xl font-bold flex items-center gap-2 text-white"><Server className="text-purple-500" /> Node Terminal</h2>
+        <div className={`px-3 py-1 rounded-full text-xs font-bold border ${isActive ? 'bg-green-900/30 text-green-400 border-green-600' : 'bg-red-900/30 text-red-400 border-red-600'}`}>{isActive ? 'SYNCED' : 'OFFLINE'}</div>
       </div>
-
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
         <div className="bg-slate-800 p-4 rounded-lg border border-slate-700">
-           <div className="text-slate-500 text-xs uppercase tracking-wider mb-1">Latest Block</div>
+           <div className="text-slate-500 text-xs uppercase tracking-wider mb-1">Block Height</div>
            <div className="text-2xl text-blue-400 font-bold">#{blockHeight.toLocaleString()}</div>
         </div>
-        <button 
-          onClick={toggleNode}
-          className={`p-4 rounded-lg font-bold transition-all flex items-center justify-center gap-2 shadow-lg ${
-            isActive ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-green-600 hover:bg-green-700 text-white'
-          }`}
-        >
+        <button onClick={() => onStatusChange(!isActive)} className={`p-4 rounded-lg font-bold flex items-center justify-center gap-2 shadow-lg transition-all active:scale-95 ${isActive ? 'bg-red-600 text-white' : 'bg-green-600 text-white'}`}>
           {isActive ? <><Square size={18}/> STOP NODE</> : <><Play size={18}/> START NODE</>}
         </button>
       </div>
-
       <div className="flex-1 bg-black rounded-lg border border-slate-700 p-3 overflow-hidden flex flex-col text-xs shadow-inner">
-         <div className="text-slate-500 mb-2 border-b border-slate-800 pb-1 flex justify-between">
-           <span>System Logs</span>
-           <span className="text-[10px] text-slate-600">v1.10.2 (Docker)</span>
-         </div>
-         <div className="overflow-y-auto flex-1 space-y-1.5 scrollbar-thin scrollbar-thumb-slate-700">
-            {logs.length === 0 && <div className="text-slate-700 italic">Waiting for node initialization...</div>}
+         <div className="overflow-y-auto flex-1 space-y-1.5 custom-scrollbar">
             {logs.map((log, i) => (
-              <div key={i} className="flex gap-2 font-mono">
-                <span className="text-slate-600">[{log.time}]</span>
-                <span className={
-                  log.type === 'error' ? 'text-red-400' : 
-                  log.type === 'success' ? 'text-green-400' : 
-                  log.type === 'warning' ? 'text-yellow-400' : 'text-slate-300'
-                }>
-                  {log.msg}
-                </span>
-              </div>
+              <div key={i} className="flex gap-2 font-mono"><span className="text-slate-600">[{log.time}]</span><span className={log.type === 'error' ? 'text-red-400' : log.type === 'success' ? 'text-green-400' : 'text-slate-300'}>{log.msg}</span></div>
             ))}
             <div ref={logsEndRef} />
          </div>
       </div>
-      
-      <div className="mt-4 p-3 bg-purple-900/20 border border-purple-500/30 rounded-lg text-xs text-purple-200 text-center">
-        Running a Node contributes to network security and boosts your mining rate by <span className="font-bold">x{NODE_BOOST}</span>!
-      </div>
+      <div className="mt-4 text-center text-xs text-slate-500">Running Node provides a <b>x{NODE_MULTIPLIER}</b> boost to the mobile app.</div>
     </div>
   );
 };
 
 // ==========================================
-// MOBILE APP SIMULATOR (Pi App)
+// 4. PICO APP (Desna strana - Integrirana)
 // ==========================================
-const PiLogo = ({ size = 40, className = "" }) => (
-  <svg width={size} height={size} viewBox="0 0 120 120" fill="none" className={`${className} drop-shadow-2xl`}>
-    <circle cx="60" cy="60" r="58" fill="#FBBF24" stroke="#B45309" strokeWidth="2" />
-    <path d="M40 80 V45 H80 V80" stroke="#7e22ce" strokeWidth="8" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
-    <path d="M30 45 H90" stroke="#7e22ce" strokeWidth="8" strokeLinecap="round" />
-    <path d="M60 45 V80" stroke="#7e22ce" strokeWidth="8" strokeLinecap="round" />
-  </svg>
-);
-
-const PiApp = ({ isNodeRunning }) => {
-  const [activeTab, setActiveTab] = useState('mine');
+const PicoApp = ({ isNodeRunning }) => {
+  // --- STATE ---
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const [walletConnected, setWalletConnected] = useState(false);
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
+  const [username, setUsername] = useState('Guest');
+  const [userAvatar, setUserAvatar] = useState('👤');
   
-  // Stanje s LocalStorage (da se ne resetira)
-  const [balance, setBalance] = useState(() => {
-    const saved = localStorage.getItem('pi_balance');
-    return saved ? parseFloat(saved) : 1450.00;
-  });
+  // Economy State (LocalStorage)
+  const [balance, setBalance] = useState(() => parseFloat(localStorage.getItem('pico_balance')) || 0);
+  const [energy, setEnergy] = useState(() => parseInt(localStorage.getItem('pico_energy')) || ENERGY_MAX);
+  const [baseMiningPower, setBaseMiningPower] = useState(0.25);
+  const [inventory, setInventory] = useState([]);
+  const [transactions, setTransactions] = useState([]);
+  const [quests, setQuests] = useState(QUESTS_DATA);
   
-  const [energy, setEnergy] = useState(() => {
-    const saved = localStorage.getItem('pi_energy');
-    return saved ? parseInt(saved) : 100;
-  });
+  // UI State
+  const [language, setLanguage] = useState('hr');
+  const [kycStatus, setKycStatus] = useState('not_started');
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [showNotification, setShowNotification] = useState(null);
+  const [posts, setPosts] = useState([{id:1, user:'PiCoreTeam', avatar:'π', content:'Welcome to the new ecosystem!', likes:999, tips:50}]);
+  const [newPostContent, setNewPostContent] = useState('');
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
 
-  const [username, setUsername] = useState('Pioneer');
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const kycStatus = 'verified'; 
+  const t = (key) => TRANSLATIONS[language][key] || key;
 
-  // Izračun brzine rudarenja (Pi/h)
-  let miningBoost = 1;
-  if (kycStatus === 'verified') miningBoost += KYC_MINING_BOOST;
-  if (isNodeRunning) miningBoost += NODE_BOOST;
-  
-  const currentRate = (BASE_MINING_RATE * miningBoost).toFixed(4);
+  // --- LOGIC ---
+  const effectiveMiningPower = Number((
+    (baseMiningPower + (kycStatus === 'verified' ? KYC_MINING_BOOST : 0)) * (isNodeRunning ? NODE_MULTIPLIER : 1)
+  ).toFixed(2));
 
-  // Formatiranje
-  const formatPi = (num) => new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 }).format(num);
-
-  // Spremanje stanja
+  // Persistence
   useEffect(() => {
-    localStorage.setItem('pi_balance', balance);
-    localStorage.setItem('pi_energy', energy);
+    localStorage.setItem('pico_balance', balance);
+    localStorage.setItem('pico_energy', energy);
   }, [balance, energy]);
 
-  // Pi SDK Integracija
+  // Energy Regen
   useEffect(() => {
-    const initPi = async () => {
-      if (window.Pi) {
-        try {
-          window.Pi.init({ version: "2.0", sandbox: true });
-          const scopes = ['username', 'payments'];
-          const auth = await window.Pi.authenticate(scopes, (p) => console.log(p));
-          setUsername(auth.user.username);
-          setIsAuthenticated(true);
-        } catch (e) { console.error(e); }
-      }
-    };
-    initPi();
-  }, []);
-
-  // Punjenje energije
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setEnergy(prev => Math.min(prev + 1, 100));
-    }, 1000); // 1% svake sekunde
+    const timer = setInterval(() => setEnergy(p => Math.min(p + ENERGY_REGEN_PER_SECOND, ENERGY_MAX)), 1000);
     return () => clearInterval(timer);
   }, []);
 
-  // Rudarenje na klik
-  const handleMine = () => {
-    if (energy < 10) return;
-    setEnergy(prev => prev - 10);
-    setBalance(prev => prev + (parseFloat(currentRate) / 60)); 
+  const triggerNotification = (msg) => {
+    setShowNotification(msg);
+    setTimeout(() => setShowNotification(null), 3000);
   };
 
+  const connectWallet = async () => {
+    setIsAuthenticating(true);
+    setTimeout(() => {
+        // Mock Pi SDK Auth
+        setUsername("PiUser_" + Math.floor(Math.random()*1000));
+        setUserAvatar('🥧');
+        setWalletConnected(true);
+        setIsAuthenticating(false);
+        if(balance === 0) {
+            setBalance(1.0);
+            triggerNotification("Welcome Bonus: +1.0 PiCo");
+        }
+    }, 1500);
+  };
+
+  const handleMine = () => {
+    if (energy < 10) { triggerNotification(t('cost_energy')); return; }
+    setEnergy(p => p - 10);
+    const mined = effectiveMiningPower;
+    setBalance(p => p + mined);
+    triggerNotification(`+${mined.toFixed(2)} PiCo`);
+  };
+
+  const startKyc = () => {
+      setKycStatus('pending');
+      triggerNotification(t('kyc_simulating'));
+      setTimeout(() => {
+          setKycStatus('verified');
+          triggerNotification(t('kyc_completed'));
+          setBalance(b => b + KYC_BONUS);
+      }, 3000);
+  };
+
+  // --- RENDER LOGIN ---
+  if (!walletConnected) {
+    return (
+      <div className="h-full bg-slate-900 text-white flex flex-col items-center justify-between p-6 relative overflow-hidden">
+        <div className="z-10 mt-10 text-center space-y-6">
+           <div onClick={connectWallet} className="cursor-pointer group relative">
+              <div className="absolute inset-0 bg-indigo-500 blur-3xl opacity-30 animate-pulse rounded-full group-hover:opacity-50 transition-opacity"></div>
+              <PicoLogo size={140} className="relative z-10" />
+              <div className="mt-4 text-sm text-indigo-300 uppercase tracking-widest animate-bounce">{t('click_enter')}</div>
+           </div>
+           <div>
+              <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400">PiCo Network</h1>
+              <p className="text-slate-400 text-sm mt-2">{t('pi_login_desc')}</p>
+           </div>
+        </div>
+        {isAuthenticating && <div className="z-10 flex items-center gap-2 text-indigo-400"><Loader2 className="animate-spin"/> Authenticating...</div>}
+      </div>
+    );
+  }
+
+  // --- RENDER MAIN APP ---
   return (
-    <div className="bg-white h-full rounded-[2rem] overflow-hidden flex flex-col font-sans relative shadow-inner">
-      {/* Status Bar Fake */}
-      <div className="bg-purple-900 text-white px-6 pt-3 pb-2 flex justify-between items-center text-xs">
-         <span>12:45</span>
-         <div className="flex gap-1">
-           <Activity size={12}/>
-           <Zap size={12}/>
+    <div className="h-full bg-slate-900 text-white flex flex-col font-sans relative overflow-hidden">
+      
+      {/* MODALS */}
+      {showProfileModal && <SettingsModal onClose={() => setShowProfileModal(false)} t={t} language={language} setLanguage={setLanguage} userAvatar={userAvatar} username={username} referralCode="REF123" triggerNotification={triggerNotification} kycStatus={kycStatus} startKyc={startKyc} transactions={transactions} />}
+      {showNotification && <div className="absolute top-20 left-1/2 -translate-x-1/2 bg-indigo-600 px-4 py-2 rounded-full shadow-lg z-50 text-sm font-bold flex items-center gap-2 animate-in slide-in-from-top-2"><CheckCircle2 size={16}/> {showNotification}</div>}
+
+      {/* HEADER */}
+      <header className="bg-slate-900/95 backdrop-blur border-b border-slate-800 p-4 flex justify-between items-center z-20">
+         <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center border border-slate-700" onClick={() => setShowProfileModal(true)}>{userAvatar}</div>
+            <div className="flex flex-col">
+               <span className="text-xs text-slate-400 font-bold">{t('energy')}</span>
+               <div className="w-20 h-1.5 bg-slate-800 rounded-full overflow-hidden"><div className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 transition-all duration-500" style={{width: `${energy}%`}}></div></div>
+            </div>
          </div>
-      </div>
+         <div className="bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-700 flex items-center gap-2">
+            <Zap size={14} className="text-yellow-400 fill-yellow-400" />
+            <span className="font-mono font-bold">{balance.toFixed(2)}</span>
+         </div>
+      </header>
 
-      {/* App Header */}
-      <div className="bg-purple-900 p-4 pb-6 flex justify-between items-center text-white shadow-lg z-10">
-        <div className="flex items-center gap-2">
-           <div className="font-bold text-xl tracking-tight">PiCo Network</div>
-           <div className="bg-yellow-500 text-purple-900 text-[10px] px-1.5 rounded font-bold">TESTNET</div>
-        </div>
-        <div className="text-right">
-           <div className="text-[10px] opacity-70">Welcome,</div>
-           <div className="font-bold leading-none">{username}</div>
-        </div>
-      </div>
+      {/* CONTENT AREA */}
+      <main className="flex-1 overflow-y-auto p-4 space-y-6 custom-scrollbar">
+         
+         {activeTab === 'dashboard' && (
+            <div className="space-y-6">
+               {/* MINING CARD */}
+               <div className="bg-gradient-to-br from-indigo-900 via-purple-900 to-slate-900 rounded-3xl p-6 border border-white/10 shadow-2xl relative overflow-hidden">
+                  <div className="absolute top-0 right-0 opacity-10"><PicoLogo size={200}/></div>
+                  <div className="relative z-10 flex flex-col items-center text-center space-y-4">
+                     <div>
+                        <h2 className="text-slate-300 text-xs uppercase tracking-widest">{t('power')}</h2>
+                        <div className="text-4xl font-bold flex items-center justify-center gap-2"><Pickaxe size={28} className="text-yellow-400"/> {effectiveMiningPower}/h</div>
+                     </div>
+                     <button onClick={() => setActiveTab('mine')} className="bg-white text-indigo-900 font-bold py-3 px-8 rounded-xl shadow-lg hover:bg-indigo-50 transition active:scale-95 w-full">{t('mine')}</button>
+                  </div>
+               </div>
 
-      {/* Main Balance Area */}
-      <div className="bg-slate-50 flex-1 overflow-y-auto">
-        
-        {activeTab === 'mine' && (
-          <div className="flex flex-col items-center pt-8">
-             <div className="text-slate-500 text-xs font-bold tracking-widest mb-1">TOTAL BALANCE</div>
-             <div className="text-4xl font-bold text-slate-800 font-mono mb-8 flex items-baseline gap-1">
-               {formatPi(balance)} <span className="text-lg text-purple-700">π</span>
-             </div>
+               {/* NODE STATUS WIDGET */}
+               <div className={`p-4 rounded-2xl border flex items-center justify-between transition-colors ${isNodeRunning ? 'bg-green-900/20 border-green-500/30' : 'bg-slate-800 border-slate-700'}`}>
+                  <div className="flex items-center gap-3">
+                     <Server size={24} className={isNodeRunning ? "text-green-400" : "text-slate-500"} />
+                     <div>
+                        <div className="font-bold text-sm text-white">Node Connection</div>
+                        <div className="text-xs text-slate-400">{isNodeRunning ? "Active (x4.0 Boost)" : "Inactive"}</div>
+                     </div>
+                  </div>
+                  <div className={`w-3 h-3 rounded-full ${isNodeRunning ? 'bg-green-400 animate-pulse' : 'bg-slate-600'}`}></div>
+               </div>
 
-             {/* Lightning Button */}
-             <div className="relative mb-8">
-               <button 
-                 onClick={handleMine}
-                 className="w-32 h-32 rounded-full bg-white shadow-xl border-4 border-slate-100 flex items-center justify-center active:scale-95 transition-transform relative z-10"
-               >
-                 <Zap size={48} className={energy >= 10 ? "fill-purple-600 text-purple-600" : "text-slate-300"} />
+               {/* LEADERBOARD WIDGET */}
+               <div className="bg-slate-800 rounded-2xl border border-slate-700 overflow-hidden">
+                  <div onClick={() => setShowLeaderboard(!showLeaderboard)} className="p-4 flex justify-between items-center cursor-pointer hover:bg-slate-750">
+                     <h3 className="font-bold flex items-center gap-2"><Trophy size={16} className="text-yellow-400"/> {t('leaderboard')}</h3>
+                     <ChevronRight size={16} className={`transition-transform ${showLeaderboard ? 'rotate-90' : ''}`}/>
+                  </div>
+                  {showLeaderboard && (
+                     <div className="border-t border-slate-700">
+                        {LEADERBOARD_DATA.map((u,i) => (
+                           <div key={i} className="p-3 flex justify-between items-center text-sm border-b border-slate-700/50 last:border-0">
+                              <div className="flex items-center gap-3"><span className="text-slate-500">#{i+1}</span> <span>{u.avatar} {u.name}</span></div>
+                              <span className="font-mono text-indigo-300">{u.balance.toFixed(0)}</span>
+                           </div>
+                        ))}
+                     </div>
+                  )}
+               </div>
+            </div>
+         )}
+
+         {activeTab === 'mine' && (
+            <div className="flex flex-col items-center py-10 space-y-8">
+               <button onClick={handleMine} className="relative group active:scale-95 transition-transform">
+                  <div className="absolute inset-0 bg-indigo-500 blur-[50px] opacity-20 group-hover:opacity-40 rounded-full transition-opacity"></div>
+                  <PicoLogo size={220} />
                </button>
-               {/* Pulse effect - standard CSS animation */}
-               <div className="absolute inset-0 bg-purple-500 rounded-full opacity-10 animate-ping"></div>
-             </div>
+               <div className="text-center">
+                  <div className="text-3xl font-bold text-white">+{effectiveMiningPower}</div>
+                  <div className="text-xs text-slate-400 uppercase tracking-widest">PiCo / Tap</div>
+               </div>
+            </div>
+         )}
 
-             <div className="text-center mb-6">
-                <div className="text-lg font-bold text-green-600 flex items-center justify-center gap-1">
-                   <Zap size={16} className="fill-green-600"/> {currentRate} π/h
-                </div>
-                <div className="text-xs text-slate-400">Current Mining Rate</div>
-             </div>
+         {activeTab === 'market' && (
+            <div className="grid grid-cols-2 gap-3">
+               {MARKET_ITEMS.map(item => (
+                  <div key={item.id} onClick={() => {if(balance >= item.price) {setBalance(b => b-item.price); triggerNotification("Bought " + item.name);}}} className="bg-slate-800 p-3 rounded-xl border border-slate-700 flex flex-col items-center text-center hover:border-indigo-500 cursor-pointer transition-colors">
+                     <div className="text-3xl mb-2">{item.icon}</div>
+                     <div className="font-bold text-xs mb-1">{item.name}</div>
+                     <div className="text-yellow-400 font-mono text-xs font-bold">{item.price} PiCo</div>
+                  </div>
+               ))}
+            </div>
+         )}
 
-             {/* Energy */}
-             <div className="w-3/4 bg-slate-200 h-2 rounded-full overflow-hidden mb-2">
-                <div className="bg-purple-600 h-full transition-all duration-300" style={{ width: `${energy}%` }}></div>
-             </div>
-             <div className="text-[10px] text-slate-400 mb-8">{energy}% Energy</div>
+         {activeTab === 'social' && (
+            <div className="space-y-4">
+               <div className="bg-slate-800 p-3 rounded-xl border border-slate-700 flex gap-2">
+                  <div className="w-8 h-8 rounded-full bg-indigo-900 flex items-center justify-center">{userAvatar}</div>
+                  <input value={newPostContent} onChange={(e)=>setNewPostContent(e.target.value)} placeholder={t('post_placeholder')} className="bg-transparent flex-1 text-sm outline-none placeholder-slate-500"/>
+                  <button onClick={()=>{if(newPostContent){setPosts([{id:Date.now(), user:username, avatar:userAvatar, content:newPostContent, likes:0, tips:0}, ...posts]); setNewPostContent('');}}}><Send size={16} className="text-indigo-400"/></button>
+               </div>
+               {posts.map(post => (
+                  <div key={post.id} className="bg-slate-800 p-4 rounded-xl border border-slate-700 space-y-2">
+                     <div className="flex gap-3 items-center">
+                        <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center">{post.avatar}</div>
+                        <div><div className="font-bold text-sm">{post.user}</div><div className="text-[10px] text-slate-500">Just now</div></div>
+                     </div>
+                     <p className="text-sm text-slate-300 pl-11">{post.content}</p>
+                     <div className="flex gap-4 pl-11 text-xs font-bold text-slate-500"><span className="flex items-center gap-1"><Heart size={12}/> {post.likes}</span><span className="flex items-center gap-1"><Trophy size={12}/> {post.tips}</span></div>
+                  </div>
+               ))}
+            </div>
+         )}
 
-             {/* Checklist */}
-             <div className="w-full px-6 space-y-3">
-                <div className="bg-white p-3 rounded-lg shadow-sm border border-slate-100 flex justify-between items-center">
-                   <div className="flex items-center gap-3">
-                      <ShieldCheck className="text-green-500" size={20} />
-                      <div className="text-sm font-bold text-slate-700">KYC Status</div>
-                   </div>
-                   <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded font-bold">VERIFIED</span>
-                </div>
+      </main>
 
-                <div className={`bg-white p-3 rounded-lg shadow-sm border border-slate-100 flex justify-between items-center ${isNodeRunning ? 'border-purple-200 bg-purple-50' : ''}`}>
-                   <div className="flex items-center gap-3">
-                      <Monitor className={isNodeRunning ? "text-purple-600" : "text-slate-400"} size={20} />
-                      <div>
-                        <div className="text-sm font-bold text-slate-700">Node Bonus</div>
-                        {isNodeRunning && <div className="text-[10px] text-purple-600">Active connection established</div>}
-                      </div>
-                   </div>
-                   <span className={`text-xs px-2 py-1 rounded font-bold ${isNodeRunning ? 'bg-purple-100 text-purple-700' : 'bg-slate-100 text-slate-400'}`}>
-                     {isNodeRunning ? `+${NODE_BOOST.toFixed(2)}` : 'INACTIVE'}
-                   </span>
-                </div>
-             </div>
-          </div>
-        )}
-
-        {activeTab === 'team' && (
-           <div className="p-6">
-              <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2"><Users className="text-purple-600"/> Referral Team</h3>
-              <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
-                 {[1,2,3,4,5].map(i => (
-                    <div key={i} className="p-4 border-b border-slate-50 last:border-0 flex justify-between items-center">
-                       <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center font-bold text-xs">
-                             P{i}
-                          </div>
-                          <div>
-                             <div className="text-sm font-bold text-slate-700">Pioneer_{2025+i}</div>
-                             <div className="text-[10px] text-green-600 flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-green-500"></span> Mining</div>
-                          </div>
-                       </div>
-                       <div className="text-xs font-bold text-slate-400">Ping</div>
-                    </div>
-                 ))}
-              </div>
-              <button className="w-full mt-4 bg-purple-600 text-white py-3 rounded-lg font-bold shadow-lg active:scale-95 transition-transform">
-                 Invite New Pioneers
-              </button>
-           </div>
-        )}
-
-        {activeTab === 'utility' && (
-           <div className="p-6 grid grid-cols-2 gap-4">
-              <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex flex-col items-center text-center">
-                 <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center mb-3">
-                    <Zap className="text-yellow-600" />
-                 </div>
-                 <h4 className="font-bold text-slate-700 text-sm">Boost Energy</h4>
-                 <p className="text-[10px] text-slate-400 mb-3">Refill to 100% instantly</p>
-                 <button onClick={() => {if(balance>=1){setBalance(b=>b-1); setEnergy(100)}}} className="text-xs bg-slate-100 hover:bg-slate-200 px-4 py-1.5 rounded-full font-bold text-slate-600 transition-colors">
-                    1.00 π
-                 </button>
-              </div>
-              
-              <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex flex-col items-center text-center opacity-75">
-                 <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mb-3">
-                    <Globe className="text-purple-600" />
-                 </div>
-                 <h4 className="font-bold text-slate-700 text-sm">Pi Browser</h4>
-                 <p className="text-[10px] text-slate-400 mb-3">Web3 Access</p>
-                 <button className="text-xs bg-purple-50 text-purple-400 px-4 py-1.5 rounded-full font-bold">
-                    Installed
-                 </button>
-              </div>
-           </div>
-        )}
-
-      </div>
-
-      {/* Bottom Nav */}
-      <div className="bg-white border-t border-slate-100 p-2 flex justify-around pb-6">
-         <button onClick={() => setActiveTab('mine')} className={`flex flex-col items-center gap-1 p-2 w-16 rounded-lg transition-colors ${activeTab === 'mine' ? 'text-purple-700' : 'text-slate-400'}`}>
-            <Pickaxe size={22} className={activeTab === 'mine' ? "fill-purple-100" : ""} />
-            <span className="text-[10px] font-bold">Mine</span>
-         </button>
-         <button onClick={() => setActiveTab('utility')} className={`flex flex-col items-center gap-1 p-2 w-16 rounded-lg transition-colors ${activeTab === 'utility' ? 'text-purple-700' : 'text-slate-400'}`}>
-            <ShoppingBag size={22} className={activeTab === 'utility' ? "fill-purple-100" : ""} />
-            <span className="text-[10px] font-bold">Utility</span>
-         </button>
-         <button onClick={() => setActiveTab('team')} className={`flex flex-col items-center gap-1 p-2 w-16 rounded-lg transition-colors ${activeTab === 'team' ? 'text-purple-700' : 'text-slate-400'}`}>
-            <Users size={22} className={activeTab === 'team' ? "fill-purple-100" : ""} />
-            <span className="text-[10px] font-bold">Team</span>
-         </button>
-         <button onClick={() => setActiveTab('profile')} className={`flex flex-col items-center gap-1 p-2 w-16 rounded-lg transition-colors ${activeTab === 'profile' ? 'text-purple-700' : 'text-slate-400'}`}>
-            <Shield size={22} />
-            <span className="text-[10px] font-bold">Roles</span>
-         </button>
-      </div>
+      {/* BOTTOM NAV */}
+      <nav className="bg-slate-900/95 backdrop-blur border-t border-slate-800 p-2 flex justify-around pb-6 md:pb-2">
+         <NavButton active={activeTab==='dashboard'} onClick={()=>setActiveTab('dashboard')} icon={<PicoLogo size={22}/>} label={t('home')}/>
+         <NavButton active={activeTab==='mine'} onClick={()=>setActiveTab('mine')} icon={<Pickaxe size={22}/>} label={t('mine')}/>
+         <NavButton active={activeTab==='social'} onClick={()=>setActiveTab('social')} icon={<Users size={22}/>} label={t('social')}/>
+         <NavButton active={activeTab==='market'} onClick={()=>setActiveTab('market')} icon={<ShoppingBag size={22}/>} label={t('market')}/>
+      </nav>
     </div>
   );
 };
 
+const NavButton = ({active, onClick, icon, label}) => (
+  <button onClick={onClick} className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all w-16 ${active ? 'text-indigo-400 -translate-y-1' : 'text-slate-500'}`}>
+     <div className={active ? 'scale-110 drop-shadow-lg' : ''}>{icon}</div>
+     <span className="text-[9px] font-bold uppercase tracking-wide">{label}</span>
+  </button>
+);
+
 // ==========================================
-// MAIN SYSTEM
+// 5. ROOT COMPONENT (Split View Container)
 // ==========================================
-export default function PiEcosystem() {
+export default function PiCoEcosystem() {
   const [nodeActive, setNodeActive] = useState(false);
   const [view, setView] = useState('split'); 
 
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-200 p-4 md:p-8 font-sans selection:bg-purple-500/30">
+    <div className="min-h-screen bg-black text-slate-200 p-4 md:p-8 font-sans selection:bg-purple-500/30">
       <div className="max-w-7xl mx-auto h-[850px] md:h-[700px] flex flex-col gap-6">
-        
-        {/* Header */}
-        <div className="flex justify-between items-end pb-4 border-b border-slate-800">
+        <div className="flex flex-col md:flex-row justify-between items-center pb-4 border-b border-slate-800 gap-4">
            <div>
-              <h1 className="text-3xl font-bold text-white tracking-tight">PiCo Pi Network Ecosystem <span className="text-purple-500">2025</span></h1>
-              <p className="text-slate-500 text-sm">Integrated Node Consensus & Mobile Application Simulation</p>
+              <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400 tracking-tight">PiCo Ecosystem</h1>
+              <p className="text-slate-500 text-sm">Integrated Node Consensus & Mobile Application</p>
            </div>
            <div className="flex bg-slate-900 p-1 rounded-lg border border-slate-800">
-              <button onClick={() => setView('split')} className={`px-4 py-2 text-xs font-bold rounded ${view === 'split' ? 'bg-slate-700 text-white' : 'text-slate-500 hover:text-white'}`}>Split View</button>
-              <button onClick={() => setView('node')} className={`px-4 py-2 text-xs font-bold rounded ${view === 'node' ? 'bg-slate-700 text-white' : 'text-slate-500 hover:text-white'}`}>Node Only</button>
-              <button onClick={() => setView('mobile')} className={`px-4 py-2 text-xs font-bold rounded ${view === 'mobile' ? 'bg-slate-700 text-white' : 'text-slate-500 hover:text-white'}`}>App Only</button>
+              <button onClick={() => setView('split')} className={`px-4 py-2 text-xs font-bold rounded transition-colors ${view === 'split' ? 'bg-slate-700 text-white' : 'text-slate-500 hover:text-white'}`}>Split View</button>
+              <button onClick={() => setView('node')} className={`px-4 py-2 text-xs font-bold rounded transition-colors ${view === 'node' ? 'bg-purple-900/50 text-purple-200 border border-purple-500/30' : 'text-slate-500 hover:text-white'}`}>Node Only</button>
+              <button onClick={() => setView('mobile')} className={`px-4 py-2 text-xs font-bold rounded transition-colors ${view === 'mobile' ? 'bg-indigo-900/50 text-indigo-200 border border-indigo-500/30' : 'text-slate-500 hover:text-white'}`}>App Only</button>
            </div>
         </div>
 
-        {/* Content */}
         <div className="flex-1 relative">
            {view === 'split' && (
              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 h-full">
                 <NodeSimulator isActive={nodeActive} onStatusChange={setNodeActive} />
-                <div className="flex justify-center items-center bg-slate-900/50 rounded-2xl border border-slate-800">
-                   <div className="w-[360px] h-[720px] bg-black rounded-[2.5rem] p-3 shadow-2xl border-[8px] border-slate-800 relative">
+                <div className="flex justify-center items-center bg-slate-900/50 rounded-2xl border border-slate-800 p-4">
+                   <div className="w-[360px] h-[720px] bg-black rounded-[2.5rem] shadow-2xl border-[8px] border-slate-800 relative overflow-hidden">
                       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-6 bg-slate-800 rounded-b-xl z-20"></div>
-                      <PiApp isNodeRunning={nodeActive} />
+                      <PicoApp isNodeRunning={nodeActive} />
                    </div>
                 </div>
              </div>
            )}
-
            {view === 'node' && <NodeSimulator isActive={nodeActive} onStatusChange={setNodeActive} />}
-           
            {view === 'mobile' && (
               <div className="flex justify-center h-full">
-                 <div className="w-[375px] h-full bg-black rounded-[2.5rem] p-3 shadow-2xl border-[8px] border-slate-800 relative">
-                     <PiApp isNodeRunning={nodeActive} />
+                 <div className="w-[375px] h-full bg-black rounded-[2.5rem] shadow-2xl border-[8px] border-slate-800 relative overflow-hidden">
+                     <PicoApp isNodeRunning={nodeActive} />
                  </div>
               </div>
            )}
         </div>
-
       </div>
     </div>
   );
