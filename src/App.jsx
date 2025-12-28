@@ -1,33 +1,35 @@
 import React, { useState, useEffect, useRef } from 'react';
-import {
-  Terminal, Server, ShieldCheck, Zap, Activity, Pickaxe,
-  Users, ShoppingBag, Monitor, Smartphone, Play, Square,
-  Shield, Clock
+import { 
+  Terminal, Server, Shield, Zap, Activity, Globe, Lock, Cpu, Play, Square,
+  Pickaxe, ShoppingBag, Users, Heart, Send, Trophy, CheckCircle2, 
+  Settings, History, BarChart3, X, ShieldCheck, Copy, LogIn, AlertCircle, 
+  Clock, Check, Loader2, Wallet, Map, PieChart, Info, Smartphone, Monitor
 } from 'lucide-react';
 
 // ==========================================
-// KONSTANTE
+// KONSTANTE (Realistični Pi Network parametri za 2025.)
 // ==========================================
-const BASE_PICO_REWARD = 100;
-const KYC_MINING_BOOST = 2;
-const NODE_BOOST = 1.5;
+const BASE_MINING_RATE = 0.003; // ~0.003 π/h (Base rate pada s vremenom)
+const KYC_MINING_BOOST = 2;     // x2 Boost za KYC
+const NODE_BOOST = 4.5;         // Node Bonus (ovisi o dostupnosti, prosjek x4.5)
+const SECURITY_CIRCLE_BOOST = 2; // x2 ako je krug pun (5/5)
 
 // ==========================================
-// NODE SIMULATOR (Desktop strana)
+// NODE SIMULATOR (Desktop strana - Pi Node)
 // ==========================================
 const NodeSimulator = ({ onStatusChange, isActive }) => {
-  const [blockHeight, setBlockHeight] = useState(124500);
-  const [dockerStatus, setDockerStatus] = useState('STOPPED');
+  const [blockHeight, setBlockHeight] = useState(2850000); // Realističan blok za Mainnet
+  const [dockerStatus, setDockerStatus] = useState('STOPPED'); 
   const [logs, setLogs] = useState([]);
   const logsEndRef = useRef(null);
   const consensusInterval = useRef(null);
 
-  // Auto-scroll na nove logove
+  // Auto-scroll logova
   useEffect(() => {
     logsEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [logs]);
 
-  // Cleanup intervala
+  // Čišćenje intervala
   useEffect(() => {
     return () => {
       if (consensusInterval.current) clearInterval(consensusInterval.current);
@@ -39,380 +41,385 @@ const NodeSimulator = ({ onStatusChange, isActive }) => {
     setLogs(prev => [...prev, { time: timestamp, msg: message, type }].slice(-20));
   };
 
+  const toggleNode = () => {
+    if (isActive) {
+      // Gašenje
+      onStatusChange(false);
+      setDockerStatus('STOPPED');
+      clearInterval(consensusInterval.current);
+      addLog('Pi Node Service Stopped.', 'warning');
+    } else {
+      // Paljenje
+      setDockerStatus('STARTING');
+      addLog('Initializing Pi Node (Docker Container)...', 'info');
+      
+      setTimeout(() => {
+        setDockerStatus('RUNNING');
+        onStatusChange(true); // Signaliziraj parent komponenti
+        addLog('Docker container [pi-consensus] started.', 'success');
+        addLog('Connected to Pi Mainnet (Open Network).', 'success');
+        addLog('SCP (Stellar Consensus Protocol) Active.', 'success');
+        startConsensus();
+      }, 2500);
+    }
+  };
+
   const startConsensus = () => {
     consensusInterval.current = setInterval(() => {
       setBlockHeight(prev => {
         const newHeight = prev + 1;
+        // SCP je brz, logiramo svaki 5. blok da ne spamamo
         if (newHeight % 5 === 0) {
-          addLog(`SCP Consensus: Block #${newHeight}`, 'info');
+           addLog(`SCP Consensus Achieved: Block #${newHeight.toLocaleString()}`, 'success');
         }
         return newHeight;
       });
-    }, 3000);
-  };
-
-  const toggleNode = () => {
-    if (isActive) {
-      // Zaustavljanje
-      onStatusChange(false);
-      setDockerStatus('STOPPED');
-      clearInterval(consensusInterval.current);
-      addLog('Node Service Stopped.', 'warning');
-    } else {
-      // Pokretanje
-      setDockerStatus('STARTING');
-      addLog('Initializing Pi Node Interface...', 'info');
-      setTimeout(() => {
-        setDockerStatus('RUNNING');
-        onStatusChange(true);
-        addLog('Docker container started.', 'success');
-        addLog('Connected to Testnet.', 'success');
-        startConsensus();
-      }, 2000);
-    }
+    }, 4000); // Simulacija vremena bloka
   };
 
   return (
-    <div className="bg-slate-900 text-slate-200 p-6 rounded-xl border border-slate-700 h-full flex flex-col">
+    <div className="bg-slate-900 text-slate-200 p-6 rounded-xl border border-slate-700 h-full flex flex-col font-mono">
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-bold flex items-center gap-2">
-          <Server className="text-purple-400" /> Node Terminal
+        <h2 className="text-xl font-bold flex items-center gap-2 text-white">
+          <Server className="text-purple-500" /> Pi Node Terminal
         </h2>
-        <div className={`px-3 py-1 rounded-full text-xs font-bold ${isActive ? 'bg-green-900/50 text-green-400' : 'bg-red-900/50 text-red-400'}`}>
-          {isActive ? 'SYNCED' : 'OFFLINE'}
+        <div className={`px-3 py-1 rounded-full text-xs font-bold border ${isActive ? 'bg-green-900/30 text-green-400 border-green-600' : 'bg-red-900/30 text-red-400 border-red-600'}`}>
+          {isActive ? 'MAINNET SYNCED' : 'OFFLINE'}
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
         <div className="bg-slate-800 p-4 rounded-lg border border-slate-700">
-          <div className="text-slate-400 text-xs uppercase">Block Height</div>
-          <div className="text-2xl font-mono text-blue-400">#{blockHeight}</div>
+           <div className="text-slate-500 text-xs uppercase tracking-wider mb-1">Latest Block</div>
+           <div className="text-2xl text-blue-400 font-bold">#{blockHeight.toLocaleString()}</div>
         </div>
-        <button
+        <button 
           onClick={toggleNode}
-          className={`p-4 rounded-lg font-bold transition-all flex items-center justify-center gap-2 ${
-            isActive ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'
+          className={`p-4 rounded-lg font-bold transition-all flex items-center justify-center gap-2 shadow-lg ${
+            isActive ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-green-600 hover:bg-green-700 text-white'
           }`}
         >
           {isActive ? <><Square size={18}/> STOP NODE</> : <><Play size={18}/> START NODE</>}
         </button>
       </div>
 
-      <div className="flex-1 bg-black rounded-lg border border-slate-700 p-3 overflow-hidden flex flex-col font-mono text-xs">
-        <div className="text-slate-500 mb-2 border-b border-slate-800 pb-1">System Logs</div>
-        <div className="overflow-y-auto flex-1 space-y-1">
-          {logs.map((log, i) => (
-            <div key={i} className="flex gap-2">
-              <span className="text-slate-600">[{log.time}]</span>
-              <span className={
-                log.type === 'error' ? 'text-red-400' :
-                log.type === 'success' ? 'text-green-400' :
-                log.type === 'warning' ? 'text-yellow-400' :
-                'text-slate-300'
-              }>
-                {log.msg}
-              </span>
-            </div>
-          ))}
-          <div ref={logsEndRef} />
-        </div>
+      <div className="flex-1 bg-black rounded-lg border border-slate-700 p-3 overflow-hidden flex flex-col text-xs shadow-inner">
+         <div className="text-slate-500 mb-2 border-b border-slate-800 pb-1 flex justify-between">
+           <span>System Logs</span>
+           <span className="text-[10px] text-slate-600">v1.10.2 (Docker)</span>
+         </div>
+         <div className="overflow-y-auto flex-1 space-y-1.5 scrollbar-thin scrollbar-thumb-slate-700">
+            {logs.length === 0 && <div className="text-slate-700 italic">Waiting for node initialization...</div>}
+            {logs.map((log, i) => (
+              <div key={i} className="flex gap-2 font-mono">
+                <span className="text-slate-600">[{log.time}]</span>
+                <span className={
+                  log.type === 'error' ? 'text-red-400' : 
+                  log.type === 'success' ? 'text-green-400' : 
+                  log.type === 'warning' ? 'text-yellow-400' : 'text-slate-300'
+                }>
+                  {log.msg}
+                </span>
+              </div>
+            ))}
+            <div ref={logsEndRef} />
+         </div>
       </div>
-
-      <div className="mt-4 text-xs text-slate-500 text-center">
-        Running this Node boosts your mobile mining rate by x{NODE_BOOST}!
+      
+      <div className="mt-4 p-3 bg-purple-900/20 border border-purple-500/30 rounded-lg text-xs text-purple-200 text-center">
+        Running a Node contributes to network security and boosts your mining rate by <span className="font-bold">x{NODE_BOOST}</span>!
       </div>
     </div>
   );
 };
 
 // ==========================================
-// PICO LOGO
+// MOBILE APP SIMULATOR (Pi App)
 // ==========================================
-const PicoLogo = ({ size = 40, className = "" }) => (
-  <svg width={size} height={size} viewBox="0 0 120 120" fill="none" className={`${className} drop-shadow-xl`}>
-    <circle cx="60" cy="60" r="58" fill="url(#logoGradient)" stroke="white" strokeWidth="2" />
-    <path d="M35 45 H85 M45 45 V80 M75 45 V80" stroke="white" strokeWidth="8" strokeLinecap="round" />
-    <defs>
-      <linearGradient id="logoGradient" x1="0" y1="0" x2="120" y2="120">
-        <stop offset="0%" stopColor="#4338ca" />
-        <stop offset="100%" stopColor="#7e22ce" />
-      </linearGradient>
-    </defs>
+const PiLogo = ({ size = 40, className = "" }) => (
+  <svg width={size} height={size} viewBox="0 0 120 120" fill="none" className={`${className} drop-shadow-2xl`}>
+    <circle cx="60" cy="60" r="58" fill="#FBBF24" stroke="#B45309" strokeWidth="2" />
+    <path d="M40 80 V45 H80 V80" stroke="#7e22ce" strokeWidth="8" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+    <path d="M30 45 H90" stroke="#7e22ce" strokeWidth="8" strokeLinecap="round" />
+    <path d="M60 45 V80" stroke="#7e22ce" strokeWidth="8" strokeLinecap="round" />
   </svg>
 );
 
-// ==========================================
-// MOBILE APP SIMULATOR
-// ==========================================
-const PicoApp = ({ isNodeRunning }) => {
+const PiApp = ({ isNodeRunning }) => {
   const [activeTab, setActiveTab] = useState('mine');
-
-  // LocalStorage persistence
+  
+  // Stanje s LocalStorage (da se ne resetira)
   const [balance, setBalance] = useState(() => {
-    const saved = localStorage.getItem('pico_balance');
-    return saved ? parseFloat(saved) : 12500.00;
+    const saved = localStorage.getItem('pi_balance');
+    return saved ? parseFloat(saved) : 1450.00;
   });
-
+  
   const [energy, setEnergy] = useState(() => {
-    const saved = localStorage.getItem('pico_energy');
-    return saved ? parseInt(saved) : 85;
+    const saved = localStorage.getItem('pi_energy');
+    return saved ? parseInt(saved) : 100;
   });
 
-  const [username, setUsername] = useState(() => {
-    return localStorage.getItem('pico_username') || 'Guest';
-  });
+  const [username, setUsername] = useState('Pioneer');
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const kycStatus = 'verified'; 
 
-  const kycStatus = 'verified';
+  // Izračun brzine rudarenja (Pi/h)
+  let miningBoost = 1;
+  if (kycStatus === 'verified') miningBoost += KYC_MINING_BOOST;
+  if (isNodeRunning) miningBoost += NODE_BOOST;
+  
+  const currentRate = (BASE_MINING_RATE * miningBoost).toFixed(4);
 
-  // Računanje mining rate-a
-  let miningRate = BASE_PICO_REWARD;
-  if (kycStatus === 'verified') miningRate *= KYC_MINING_BOOST;
-  if (isNodeRunning) miningRate *= NODE_BOOST;
+  // Formatiranje
+  const formatPi = (num) => new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 }).format(num);
 
-  const formatPico = (num) => new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(num);
-
-  // Spremanje u localStorage
+  // Spremanje stanja
   useEffect(() => {
-    localStorage.setItem('pico_balance', balance);
-    localStorage.setItem('pico_energy', energy);
-    localStorage.setItem('pico_username', username);
-  }, [balance, energy, username]);
+    localStorage.setItem('pi_balance', balance);
+    localStorage.setItem('pi_energy', energy);
+  }, [balance, energy]);
 
-  // Regeneracija energije
+  // Pi SDK Integracija
+  useEffect(() => {
+    const initPi = async () => {
+      if (window.Pi) {
+        try {
+          window.Pi.init({ version: "2.0", sandbox: true });
+          const scopes = ['username', 'payments'];
+          const auth = await window.Pi.authenticate(scopes, (p) => console.log(p));
+          setUsername(auth.user.username);
+          setIsAuthenticated(true);
+        } catch (e) { console.error(e); }
+      }
+    };
+    initPi();
+  }, []);
+
+  // Punjenje energije
   useEffect(() => {
     const timer = setInterval(() => {
       setEnergy(prev => Math.min(prev + 1, 100));
-    }, 1000);
+    }, 1000); // 1% svake sekunde
     return () => clearInterval(timer);
   }, []);
 
+  // Rudarenje na klik
   const handleMine = () => {
     if (energy < 10) return;
     setEnergy(prev => prev - 10);
-    setBalance(prev => prev + miningRate);
+    setBalance(prev => prev + (parseFloat(currentRate) / 60)); 
   };
 
   return (
-    <div className="bg-slate-900 h-full rounded-xl border border-slate-700 relative overflow-hidden flex flex-col font-sans">
-      {/* Header */}
-      <div className="bg-slate-800/80 backdrop-blur p-4 flex justify-between items-center border-b border-slate-700">
+    <div className="bg-white h-full rounded-[2rem] overflow-hidden flex flex-col font-sans relative shadow-inner">
+      {/* Status Bar Fake */}
+      <div className="bg-purple-900 text-white px-6 pt-3 pb-2 flex justify-between items-center text-xs">
+         <span>12:45</span>
+         <div className="flex gap-1">
+           <Activity size={12}/>
+           <Zap size={12}/>
+         </div>
+      </div>
+
+      {/* App Header */}
+      <div className="bg-purple-900 p-4 pb-6 flex justify-between items-center text-white shadow-lg z-10">
         <div className="flex items-center gap-2">
-          <div className="bg-indigo-600 w-8 h-8 rounded-full flex items-center justify-center text-white font-bold">P</div>
-          <div className="flex flex-col">
-            <div className="text-white font-bold text-sm">PiCo Network</div>
-            <div className="text-[10px] text-slate-400">Hi, {username}</div>
-          </div>
+           <div className="font-bold text-xl tracking-tight">PiCo Network</div>
+           <div className="bg-yellow-500 text-purple-900 text-[10px] px-1.5 rounded font-bold">TESTNET</div>
         </div>
-        <div className="bg-slate-900 px-3 py-1 rounded-full border border-slate-700 flex items-center gap-2">
-          <Zap size={12} className="text-yellow-400 fill-yellow-400" />
-          <span className="text-xs text-white font-mono">{formatPico(balance)}</span>
+        <div className="text-right">
+           <div className="text-[10px] opacity-70">Welcome,</div>
+           <div className="font-bold leading-none">{username}</div>
         </div>
       </div>
 
-      {/* Energy Bar */}
-      <div className="mx-4 mt-4">
-        <div className="bg-slate-800 p-1 rounded-full border border-slate-700">
-          <div className="bg-gradient-to-r from-indigo-500 to-purple-500 h-2 rounded-full transition-all duration-300" style={{ width: `${energy}%` }} />
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-6">
+      {/* Main Balance Area */}
+      <div className="bg-slate-50 flex-1 overflow-y-auto">
+        
         {activeTab === 'mine' && (
-          <div className="space-y-6">
-            {/* Mining Button */}
-            <div className="flex flex-col items-center justify-center py-6">
-              <button
-                onClick={handleMine}
-                disabled={energy < 10}
-                className="relative group active:scale-95 transition-transform disabled:opacity-60"
-              >
-                <div className="absolute inset-0 bg-indigo-500 blur-3xl opacity-20 group-hover:opacity-40 rounded-full transition-opacity" />
-                <PicoLogo size={180} />
-                {energy < 10 && (
-                  <div className="absolute inset-0 flex items-center justify-center text-red-400 font-bold bg-black/50 rounded-full backdrop-blur-[2px]">
-                    Recharging...
-                  </div>
-                )}
-              </button>
-              <div className="mt-6 text-center">
-                <div className="text-3xl font-bold text-white font-mono">+{formatPico(miningRate)}</div>
-                <div className="text-xs text-slate-400 uppercase tracking-widest">Pico / Tap</div>
-              </div>
-            </div>
+          <div className="flex flex-col items-center pt-8">
+             <div className="text-slate-500 text-xs font-bold tracking-widest mb-1">TOTAL BALANCE</div>
+             <div className="text-4xl font-bold text-slate-800 font-mono mb-8 flex items-baseline gap-1">
+               {formatPi(balance)} <span className="text-lg text-purple-700">π</span>
+             </div>
 
-            {/* Boosts */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="p-3 rounded-xl border bg-green-900/20 border-green-500/30 flex flex-col items-center text-center">
-                <ShieldCheck size={20} className="text-green-400 mb-1" />
-                <div className="text-[10px] text-slate-400 uppercase">KYC Status</div>
-                <div className="text-green-400 font-bold text-xs">Active (x{KYC_MINING_BOOST})</div>
-              </div>
-              <div className={`p-3 rounded-xl border flex flex-col items-center text-center transition-all ${isNodeRunning ? 'bg-purple-900/30 border-purple-500/50 shadow-[0_0_15px_rgba(168,85,247,0.2)]' : 'bg-slate-800 border-slate-700 opacity-50'}`}>
-                <Server size={20} className={isNodeRunning ? "text-purple-400 animate-pulse mb-1" : "text-slate-500 mb-1"} />
-                <div className="text-[10px] text-slate-400 uppercase">Node Boost</div>
-                <div className={`font-bold text-xs ${isNodeRunning ? 'text-purple-300' : 'text-slate-500'}`}>
-                  {isNodeRunning ? `Active (x${NODE_BOOST})` : 'Offline'}
-                </div>
-              </div>
-            </div>
+             {/* Lightning Button */}
+             <div className="relative mb-8">
+               <button 
+                 onClick={handleMine}
+                 className="w-32 h-32 rounded-full bg-white shadow-xl border-4 border-slate-100 flex items-center justify-center active:scale-95 transition-transform relative z-10"
+               >
+                 <Zap size={48} className={energy >= 10 ? "fill-purple-600 text-purple-600" : "text-slate-300"} />
+               </button>
+               {/* Pulse effect - standard CSS animation */}
+               <div className="absolute inset-0 bg-purple-500 rounded-full opacity-10 animate-ping"></div>
+             </div>
 
-            {/* Recent Activities */}
-            <div className="bg-slate-800 rounded-xl p-4 border border-slate-700">
-              <h3 className="text-xs text-slate-400 uppercase font-bold mb-3 flex items-center gap-2">
-                <Activity size={14} /> Recent Activities
-              </h3>
-              <div className="space-y-3">
-                <div className="flex justify-between text-xs">
-                  <span className="text-slate-300">Daily Grant</span>
-                  <span className="text-green-400">+500 Pico</span>
+             <div className="text-center mb-6">
+                <div className="text-lg font-bold text-green-600 flex items-center justify-center gap-1">
+                   <Zap size={16} className="fill-green-600"/> {currentRate} π/h
                 </div>
-                {isNodeRunning && (
-                  <div className="flex justify-between text-xs animate-pulse">
-                    <span className="text-purple-300">Node Validator Reward</span>
-                    <span className="text-purple-400">+12.5 Pico/s</span>
-                  </div>
-                )}
-              </div>
-            </div>
+                <div className="text-xs text-slate-400">Current Mining Rate</div>
+             </div>
+
+             {/* Energy */}
+             <div className="w-3/4 bg-slate-200 h-2 rounded-full overflow-hidden mb-2">
+                <div className="bg-purple-600 h-full transition-all duration-300" style={{ width: `${energy}%` }}></div>
+             </div>
+             <div className="text-[10px] text-slate-400 mb-8">{energy}% Energy</div>
+
+             {/* Checklist */}
+             <div className="w-full px-6 space-y-3">
+                <div className="bg-white p-3 rounded-lg shadow-sm border border-slate-100 flex justify-between items-center">
+                   <div className="flex items-center gap-3">
+                      <ShieldCheck className="text-green-500" size={20} />
+                      <div className="text-sm font-bold text-slate-700">KYC Status</div>
+                   </div>
+                   <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded font-bold">VERIFIED</span>
+                </div>
+
+                <div className={`bg-white p-3 rounded-lg shadow-sm border border-slate-100 flex justify-between items-center ${isNodeRunning ? 'border-purple-200 bg-purple-50' : ''}`}>
+                   <div className="flex items-center gap-3">
+                      <Monitor className={isNodeRunning ? "text-purple-600" : "text-slate-400"} size={20} />
+                      <div>
+                        <div className="text-sm font-bold text-slate-700">Node Bonus</div>
+                        {isNodeRunning && <div className="text-[10px] text-purple-600">Active connection established</div>}
+                      </div>
+                   </div>
+                   <span className={`text-xs px-2 py-1 rounded font-bold ${isNodeRunning ? 'bg-purple-100 text-purple-700' : 'bg-slate-100 text-slate-400'}`}>
+                     {isNodeRunning ? `+${NODE_BOOST.toFixed(2)}` : 'INACTIVE'}
+                   </span>
+                </div>
+             </div>
           </div>
         )}
 
-        {activeTab === 'social' && (
-          <div className="space-y-4">
-            <div className="bg-slate-800 p-4 rounded-xl border border-slate-700">
-              <h3 className="text-white font-bold flex items-center gap-2 mb-4">
-                <Users className="text-indigo-400" size={20} /> Security Circle
-              </h3>
-              <div className="space-y-3">
-                {[1,2,3].map(i => (
-                  <div key={i} className="flex items-center justify-between bg-slate-900/50 p-3 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center">User</div>
-                      <div className="text-sm text-slate-300">Pioneer_{1000+i}</div>
+        {activeTab === 'team' && (
+           <div className="p-6">
+              <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2"><Users className="text-purple-600"/> Referral Team</h3>
+              <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+                 {[1,2,3,4,5].map(i => (
+                    <div key={i} className="p-4 border-b border-slate-50 last:border-0 flex justify-between items-center">
+                       <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center font-bold text-xs">
+                             P{i}
+                          </div>
+                          <div>
+                             <div className="text-sm font-bold text-slate-700">Pioneer_{2025+i}</div>
+                             <div className="text-[10px] text-green-600 flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-green-500"></span> Mining</div>
+                          </div>
+                       </div>
+                       <div className="text-xs font-bold text-slate-400">Ping</div>
                     </div>
-                    <span className="text-xs text-green-400 font-mono">Active</span>
-                  </div>
-                ))}
+                 ))}
               </div>
-            </div>
-          </div>
+              <button className="w-full mt-4 bg-purple-600 text-white py-3 rounded-lg font-bold shadow-lg active:scale-95 transition-transform">
+                 Invite New Pioneers
+              </button>
+           </div>
         )}
 
-        {activeTab === 'market' && (
-          <div className="grid grid-cols-2 gap-4">
-            <div className="bg-slate-800 p-4 rounded-xl border border-slate-700 flex flex-col items-center text-center">
-              <Zap className="text-yellow-400 mb-2" size={32} />
-              <h3 className="text-white font-bold text-sm">Energy Refill</h3>
-              <p className="text-slate-400 text-[10px] mb-3">Restore 100% Energy</p>
-              <button
-                onClick={() => {
-                  if (balance >= 1000) {
-                    setBalance(b => b - 1000);
-                    setEnergy(100);
-                  }
-                }}
-                className="w-full py-1.5 bg-slate-700 hover:bg-slate-600 rounded text-xs text-white font-bold"
-              >
-                1,000 Pico
-              </button>
-            </div>
-          </div>
+        {activeTab === 'utility' && (
+           <div className="p-6 grid grid-cols-2 gap-4">
+              <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex flex-col items-center text-center">
+                 <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center mb-3">
+                    <Zap className="text-yellow-600" />
+                 </div>
+                 <h4 className="font-bold text-slate-700 text-sm">Boost Energy</h4>
+                 <p className="text-[10px] text-slate-400 mb-3">Refill to 100% instantly</p>
+                 <button onClick={() => {if(balance>=1){setBalance(b=>b-1); setEnergy(100)}}} className="text-xs bg-slate-100 hover:bg-slate-200 px-4 py-1.5 rounded-full font-bold text-slate-600 transition-colors">
+                    1.00 π
+                 </button>
+              </div>
+              
+              <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex flex-col items-center text-center opacity-75">
+                 <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mb-3">
+                    <Globe className="text-purple-600" />
+                 </div>
+                 <h4 className="font-bold text-slate-700 text-sm">Pi Browser</h4>
+                 <p className="text-[10px] text-slate-400 mb-3">Web3 Access</p>
+                 <button className="text-xs bg-purple-50 text-purple-400 px-4 py-1.5 rounded-full font-bold">
+                    Installed
+                 </button>
+              </div>
+           </div>
         )}
+
       </div>
 
-      {/* Bottom Navigation */}
-      <div className="bg-slate-900 border-t border-slate-800 p-2 flex justify-around">
-        <button onClick={() => setActiveTab('mine')} className={`p-2 flex flex-col items-center transition-colors ${activeTab === 'mine' ? 'text-indigo-400' : 'text-slate-600'}`}>
-          <Pickaxe size={20}/>
-          <span className="text-[10px] font-bold mt-1">Mine</span>
-        </button>
-        <button onClick={() => setActiveTab('social')} className={`p-2 flex flex-col items-center transition-colors ${activeTab === 'social' ? 'text-indigo-400' : 'text-slate-600'}`}>
-          <Users size={20}/>
-          <span className="text-[10px] font-bold mt-1">Team</span>
-        </button>
-        <button onClick={() => setActiveTab('market')} className={`p-2 flex flex-col items-center transition-colors ${activeTab === 'market' ? 'text-indigo-400' : 'text-slate-600'}`}>
-          <ShoppingBag size={20}/>
-          <span className="text-[10px] font-bold mt-1">Market</span>
-        </button>
+      {/* Bottom Nav */}
+      <div className="bg-white border-t border-slate-100 p-2 flex justify-around pb-6">
+         <button onClick={() => setActiveTab('mine')} className={`flex flex-col items-center gap-1 p-2 w-16 rounded-lg transition-colors ${activeTab === 'mine' ? 'text-purple-700' : 'text-slate-400'}`}>
+            <Pickaxe size={22} className={activeTab === 'mine' ? "fill-purple-100" : ""} />
+            <span className="text-[10px] font-bold">Mine</span>
+         </button>
+         <button onClick={() => setActiveTab('utility')} className={`flex flex-col items-center gap-1 p-2 w-16 rounded-lg transition-colors ${activeTab === 'utility' ? 'text-purple-700' : 'text-slate-400'}`}>
+            <ShoppingBag size={22} className={activeTab === 'utility' ? "fill-purple-100" : ""} />
+            <span className="text-[10px] font-bold">Utility</span>
+         </button>
+         <button onClick={() => setActiveTab('team')} className={`flex flex-col items-center gap-1 p-2 w-16 rounded-lg transition-colors ${activeTab === 'team' ? 'text-purple-700' : 'text-slate-400'}`}>
+            <Users size={22} className={activeTab === 'team' ? "fill-purple-100" : ""} />
+            <span className="text-[10px] font-bold">Team</span>
+         </button>
+         <button onClick={() => setActiveTab('profile')} className={`flex flex-col items-center gap-1 p-2 w-16 rounded-lg transition-colors ${activeTab === 'profile' ? 'text-purple-700' : 'text-slate-400'}`}>
+            <Shield size={22} />
+            <span className="text-[10px] font-bold">Roles</span>
+         </button>
       </div>
     </div>
   );
 };
 
 // ==========================================
-// GLAVNA KOMPONENTA
+// MAIN SYSTEM
 // ==========================================
 export default function PiEcosystem() {
   const [nodeActive, setNodeActive] = useState(false);
-  const [view, setView] = useState('split'); // 'split', 'mobile', 'node'
+  const [view, setView] = useState('split'); 
 
   return (
-    <div className="min-h-screen bg-black text-slate-200 p-4 md:p-8 font-sans selection:bg-purple-500/30">
-      {/* Header */}
-      <div className="max-w-6xl mx-auto mb-6 flex flex-col md:flex-row justify-between items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400">
-            PiCo Pi Network Ecosystem
-          </h1>
-          <p className="text-xs text-slate-500">Integrated Environment: Consensus Node & Mobile Layer</p>
+    <div className="min-h-screen bg-slate-900 text-slate-200 p-4 md:p-8 font-sans selection:bg-purple-500/30">
+      <div className="max-w-7xl mx-auto h-[850px] md:h-[700px] flex flex-col gap-6">
+        
+        {/* Header */}
+        <div className="flex justify-between items-end pb-4 border-b border-slate-800">
+           <div>
+              <h1 className="text-3xl font-bold text-white tracking-tight">PiCo Pi Network Ecosystem <span className="text-purple-500">2025</span></h1>
+              <p className="text-slate-500 text-sm">Integrated Node Consensus & Mobile Application Simulation</p>
+           </div>
+           <div className="flex bg-slate-900 p-1 rounded-lg border border-slate-800">
+              <button onClick={() => setView('split')} className={`px-4 py-2 text-xs font-bold rounded ${view === 'split' ? 'bg-slate-700 text-white' : 'text-slate-500 hover:text-white'}`}>Split View</button>
+              <button onClick={() => setView('node')} className={`px-4 py-2 text-xs font-bold rounded ${view === 'node' ? 'bg-slate-700 text-white' : 'text-slate-500 hover:text-white'}`}>Node Only</button>
+              <button onClick={() => setView('mobile')} className={`px-4 py-2 text-xs font-bold rounded ${view === 'mobile' ? 'bg-slate-700 text-white' : 'text-slate-500 hover:text-white'}`}>App Only</button>
+           </div>
         </div>
 
-        {/* View Switcher */}
-        <div className="bg-slate-900 p-1 rounded-lg border border-slate-800 flex gap-1">
-          <button onClick={() => setView('split')} className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${view === 'split' ? 'bg-slate-700 text-white' : 'text-slate-500 hover:text-slate-300'}`}>
-            Split View
-          </button>
-          <button onClick={() => setView('node')} className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1 ${view === 'node' ? 'bg-purple-900/50 text-purple-300 border border-purple-500/30' : 'text-slate-500 hover:text-slate-300'}`}>
-            <Monitor size={12} /> Node
-          </button>
-          <button onClick={() => setView('mobile')} className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1 ${view === 'mobile' ? 'bg-indigo-900/50 text-indigo-300 border border-indigo-500/30' : 'text-slate-500 hover:text-slate-300'}`}>
-            <Smartphone size={12} /> App
-          </button>
-        </div>
-      </div>
+        {/* Content */}
+        <div className="flex-1 relative">
+           {view === 'split' && (
+             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 h-full">
+                <NodeSimulator isActive={nodeActive} onStatusChange={setNodeActive} />
+                <div className="flex justify-center items-center bg-slate-900/50 rounded-2xl border border-slate-800">
+                   <div className="w-[360px] h-[720px] bg-black rounded-[2.5rem] p-3 shadow-2xl border-[8px] border-slate-800 relative">
+                      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-6 bg-slate-800 rounded-b-xl z-20"></div>
+                      <PiApp isNodeRunning={nodeActive} />
+                   </div>
+                </div>
+             </div>
+           )}
 
-      {/* Content Area */}
-      <div className="max-w-6xl mx-auto h-[800px] md:h-[600px] relative">
-        {view === 'split' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 h-full">
-            {/* Node */}
-            <div className="h-full">
-              <div className="text-xs text-slate-500 mb-2 uppercase tracking-wider font-bold">Desktop / Server Side</div>
-              <NodeSimulator isActive={nodeActive} onStatusChange={setNodeActive} />
-            </div>
-            {/* Mobile App */}
-            <div className="h-full flex flex-col items-center">
-              <div className="text-xs text-slate-500 mb-2 uppercase tracking-wider font-bold">Mobile / User Side</div>
-              <div className="w-[320px] h-full border-[8px] border-slate-800 rounded-[2.5rem] bg-black overflow-hidden shadow-2xl relative">
-                <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-32 h-6 bg-slate-800 rounded-b-xl z-20"></div>
-                <PicoApp isNodeRunning={nodeActive} />
+           {view === 'node' && <NodeSimulator isActive={nodeActive} onStatusChange={setNodeActive} />}
+           
+           {view === 'mobile' && (
+              <div className="flex justify-center h-full">
+                 <div className="w-[375px] h-full bg-black rounded-[2.5rem] p-3 shadow-2xl border-[8px] border-slate-800 relative">
+                     <PiApp isNodeRunning={nodeActive} />
+                 </div>
               </div>
-            </div>
-          </div>
-        )}
-
-        {view === 'node' && <NodeSimulator isActive={nodeActive} onStatusChange={setNodeActive} />}
-
-        {view === 'mobile' && (
-          <div className="flex justify-center h-full">
-            <div className="w-full max-w-md h-full border border-slate-800 rounded-xl overflow-hidden shadow-2xl">
-              <PicoApp isNodeRunning={nodeActive} />
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Connection Indicator (samo u split viewu) */}
-      {view === 'split' && (
-        <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 hidden md:flex items-center gap-4 text-xs font-mono opacity-50 pointer-events-none">
-          <div className="w-24 h-[1px] bg-gradient-to-r from-transparent to-purple-500"></div>
-          <span className={nodeActive ? "text-green-400" : "text-slate-600"}>
-            {nodeActive ? "DATA LINK ESTABLISHED" : "WAITING FOR NODE..."}
-          </span>
-          <div className="w-24 h-[1px] bg-gradient-to-l from-transparent to-indigo-500"></div>
+           )}
         </div>
-      )}
+
+      </div>
     </div>
   );
 }
