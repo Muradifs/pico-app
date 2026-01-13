@@ -1,0 +1,31 @@
+<svg width="512" height="512" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Outer Ring / Coin Edge -->
+  <circle cx="60" cy="60" r="58" fill="url(#logoGradient)" stroke="url(#goldGradient)" stroke-width="3" />
+  
+  <!-- Inner Decorative Circle -->
+  <circle cx="60" cy="60" r="48" stroke="rgba(255,255,255,0.1)" stroke-width="1" stroke-dasharray="4 4" />
+  
+  <!-- The Pi Symbol Structure -->
+  <path d="M35 45 H85" stroke="white" stroke-width="10" stroke-linecap="round" />
+  <path d="M45 45 V80" stroke="white" stroke-width="10" stroke-linecap="round" />
+  <path d="M75 45 V80" stroke="white" stroke-width="10" stroke-linecap="round" />
+  
+  <!-- Blockchain Nodes (Dots) - Gold accents -->
+  <circle cx="35" cy="45" r="5" fill="#FCD34D" />
+  <circle cx="85" cy="45" r="5" fill="#FCD34D" />
+  <circle cx="45" cy="80" r="5" fill="#FCD34D" />
+  <circle cx="75" cy="80" r="5" fill="#FCD34D" />
+
+  <!-- Definitions for Gradients -->
+  <defs>
+    <linearGradient id="logoGradient" x1="0" y1="0" x2="120" y2="120">
+      <stop offset="0%" stop-color="#4F46E5" /> <!-- Indigo-600 -->
+      <stop offset="100%" stop-color="#7C3AED" /> <!-- Violet-600 -->
+    </linearGradient>
+    <linearGradient id="goldGradient" x1="0" y1="0" x2="120" y2="120">
+      <stop offset="0%" stop-color="#FCD34D" /> <!-- Amber-300 -->
+      <stop offset="50%" stop-color="#F59E0B" /> <!-- Amber-500 -->
+      <stop offset="100%" stop-color="#B45309" /> <!-- Amber-700 -->
+    </linearGradient>
+  </defs>
+</svg>
