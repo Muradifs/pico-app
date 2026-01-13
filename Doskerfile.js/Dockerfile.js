@@ -17,14 +17,12 @@ COPY . .
 RUN npm run build
 
 # Faza 2: Serve (Posluživanje putem Nginx-a)
-# Ovo čini tvoj "čvor" laganim i brzim
 FROM nginx:alpine
 
 # Kopiraj izgrađenu aplikaciju iz Faze 1 u Nginx web folder
 COPY --from=build /app/dist /usr/share/nginx/html
 
-# Kopiraj osnovnu Nginx konfiguraciju (opcionalno, koristi default)
-# Ovdje osiguravamo da React routing radi kako treba
+# Kopiraj osnovnu Nginx konfiguraciju za React routing
 RUN echo 'server { \
     listen 80; \
     location / { \
