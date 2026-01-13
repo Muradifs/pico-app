@@ -3,7 +3,7 @@ import {
   Pickaxe, ShoppingBag, Users, Heart, Send, Zap, Trophy,
   CheckCircle2, Settings, History, BarChart3, X,
   ShieldCheck, Copy, LogIn, AlertCircle, Clock, Check, Activity, Loader2,
-  Wallet, Globe, Server, Square, Play, FileText, Info
+  Wallet, Globe, Server, Square, Play, FileText, Info, ChevronRight
 } from 'lucide-react';
 
 // --- CONFIGURATION ---
@@ -48,33 +48,18 @@ const TRANSLATIONS = {
 
 const LANGUAGES = [{ code: 'en', label: 'English', flag: '🇬🇧' }, { code: 'hr', label: 'Hrvatski', flag: '🇭🇷' }];
 
-// --- REAL PI SDK INTEGRATION ---
-// Assuming the Pi SDK script is loaded in index.html: <script src="https://sdk.minepi.com/pi-sdk.js"></script>
-// We use window.Pi directly for real integration.
+// --- MOCK PI SDK ---
+// This ensures the app doesn't crash if Pi SDK script isn't loaded or fails
 const PiSDK = {
   init: async () => {
     if (window.Pi) {
-      try {
-        window.Pi.init({ version: "2.0", sandbox: true }); // Use sandbox: false for production
-      } catch (e) {
-        console.warn('Pi SDK init failed:', e);
-      }
-    } else {
-      console.warn('Pi SDK not loaded. Ensure the script is included.');
+      try { window.Pi.init({ version: "2.0", sandbox: true }); } catch(e) { console.warn(e); }
     }
   },
-  authenticate: async (scopes = ['username']) => {
-    if (window.Pi) {
-      try {
-        const authResult = await window.Pi.authenticate(scopes, () => {}); // onIncompletePaymentFound callback can be customized if needed
-        return authResult;
-      } catch (e) {
-        console.error('Pi Authentication failed:', e);
-        throw e;
-      }
-    } else {
-      throw new Error('Pi SDK not available. This app requires Pi Network environment.');
-    }
+  // Fallback authentication for testing outside Pi Browser
+  authenticateMock: async () => {
+    await new Promise(r => setTimeout(r, 1500));
+    return { user: { username: "Desktop_User", uid: "uid_" + Date.now() } };
   }
 };
 
@@ -111,43 +96,23 @@ const LEGAL_TEXTS = {
     <div className="space-y-4">
       <p><strong>Last Updated: January 2025</strong></p>
       <p>Entrance PiCo ("we", "our") values your privacy. This Privacy Policy explains how we handle your data within the Pi Network ecosystem.</p>
-      
       <h4 className="font-bold text-white">1. Data Collection</h4>
-      <p>We collect basic user information provided by the Pi Network SDK upon authentication: your unique Pi User ID (UID) and your Username. We do not collect passwords or private keys.</p>
-      
-      <h4 className="font-bold text-white">2. Usage of Data</h4>
-      <p>Your data is used solely to maintain your in-app account, track your mining progress, inventory, and social interactions within the app.</p>
-      
-      <h4 className="font-bold text-white">3. Data Sharing</h4>
-      <p>We do not sell or share your personal data with third parties. All game data is stored locally or on secure cloud services (Firebase) strictly for game functionality.</p>
-      
-      <h4 className="font-bold text-white">4. Pi Network Compliance</h4>
-      <p>This app complies with Pi Network Developer Terms. We strictly prohibit the use of bots or automated scripts.</p>
+      <p>We collect basic user information provided by the Pi Network SDK upon authentication: your unique Pi User ID (UID) and your Username.</p>
     </div>
   ),
   terms: (
     <div className="space-y-4">
       <p><strong>Last Updated: January 2025</strong></p>
       <p>By using Entrance PiCo, you agree to these Terms of Service.</p>
-      
       <h4 className="font-bold text-white">1. Virtual Currency</h4>
-      <p>"PiCo" tokens earned in this app are virtual points for entertainment purposes only. They currently have no monetary value and are not exchangeable for fiat currency.</p>
-      
-      <h4 className="font-bold text-white">2. Prohibited Conduct</h4>
-      <p>You agree not to cheat, hack, or use automated software (bots) to mine. Violation will result in a permanent ban.</p>
-      
-      <h4 className="font-bold text-white">3. Disclaimer</h4>
-      <p>The app is provided "as is" without warranties of any kind. We are not responsible for any data loss or service interruptions.</p>
-      
-      <h4 className="font-bold text-white">4. Pi Network</h4>
-      <p>We are an independent project and not affiliated with the Pi Core Team, though we operate within their ecosystem guidelines.</p>
+      <p>"PiCo" tokens earned in this app are virtual points for entertainment purposes only.</p>
     </div>
   )
 };
 
 // --- COMPONENTS ---
 
-// Legal Text Modal
+// 1. Legal Modal
 const LegalModal = ({ title, content, onClose }) => (
   <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-[60] flex items-center justify-center p-4 animate-in fade-in zoom-in-95">
     <div className="bg-slate-900 w-full max-w-lg rounded-2xl border border-slate-700 shadow-2xl flex flex-col max-h-[85vh]">
@@ -165,10 +130,11 @@ const LegalModal = ({ title, content, onClose }) => (
   </div>
 );
 
+// 2. Settings Modal
 const SettingsModal = ({ 
   onClose, t, language, setLanguage, userAvatar, username, referralCode, 
   triggerNotification, kycStatus, isKycProcessing, startKyc, transactions, 
-  onOpenPrivacy, onOpenTerms 
+  onOpenPrivacy, onOpenTerms, KYC_MINING_BOOST 
 }) => (
   <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
     <div className="bg-slate-900 w-full max-w-md rounded-2xl border border-slate-700 shadow-2xl overflow-hidden max-h-[85vh] flex flex-col">
@@ -178,7 +144,6 @@ const SettingsModal = ({
       </div>
       
       <div className="p-4 space-y-6 overflow-y-auto custom-scrollbar">
-        {/* User Info */}
         <div className="space-y-3">
           <h3 className="text-xs font-bold text-slate-500 uppercase">{t('profile')}</h3>
           <div className="flex gap-3 items-center bg-slate-800/50 p-3 rounded-xl border border-slate-700">
@@ -197,7 +162,6 @@ const SettingsModal = ({
           </div>
         </div>
 
-        {/* KYC */}
         <div className="space-y-2 bg-slate-800/50 p-4 rounded-xl border border-slate-700">
            <div className="flex justify-between items-center mb-2">
               <h3 className="text-xs font-bold text-slate-500 uppercase">{t('kyc_status')}</h3>
@@ -207,9 +171,9 @@ const SettingsModal = ({
               </span>
            </div>
            {kycStatus === 'not_started' && <button onClick={startKyc} disabled={isKycProcessing} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg text-sm transition">{t('kyc_start')}</button>}
+           {kycStatus === 'verified' && <p className="text-xs text-green-400 bg-green-400/10 p-2 rounded text-center">Mining Boost Active (+{KYC_MINING_BOOST})</p>}
         </div>
 
-        {/* Legal Links */}
         <div className="space-y-2">
           <h3 className="text-xs font-bold text-slate-500 uppercase">{t('legal')}</h3>
           <div className="grid grid-cols-2 gap-2">
@@ -222,7 +186,6 @@ const SettingsModal = ({
           </div>
         </div>
 
-        {/* Language */}
         <div className="space-y-2">
           <h3 className="text-xs font-bold text-slate-500 uppercase">{t('language')}</h3>
           <div className="grid grid-cols-2 gap-2">
@@ -234,7 +197,6 @@ const SettingsModal = ({
           </div>
         </div>
 
-        {/* History */}
         <div className="space-y-3">
           <h3 className="text-xs font-bold text-slate-500 uppercase flex items-center gap-2"><History size={14} /> {t('transactions')}</h3>
           <div className="bg-slate-900 rounded-xl border border-slate-700 p-2 max-h-40 overflow-y-auto space-y-2">
@@ -251,6 +213,15 @@ const SettingsModal = ({
   </div>
 );
 
+// 3. Nav Button
+const NavButton = ({ active, onClick, icon, label }) => (
+  <button onClick={onClick} className={`flex flex-col items-center gap-1 p-2 rounded-xl w-16 transition-all ${active ? 'text-indigo-400 -translate-y-1' : 'text-slate-500 hover:text-slate-300'}`}>
+    <div className={active ? 'scale-110 transition-transform' : ''}>{icon}</div>
+    <span className="text-[9px] font-medium">{label}</span>
+  </button>
+);
+
+// 4. Node Simulator
 const NodeSimulator = ({ onStatusChange, isActive }) => {
   const [logs, setLogs] = useState([]);
   const logsEndRef = useRef(null);
@@ -284,7 +255,7 @@ const NodeSimulator = ({ onStatusChange, isActive }) => {
   );
 };
 
-// --- MOBILE APP COMPONENT ---
+// 5. Pico Mobile App
 const PicoApp = ({ isNodeRunning }) => {
   const saved = loadState();
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -299,7 +270,7 @@ const PicoApp = ({ isNodeRunning }) => {
   const [notification, setNotification] = useState(null);
   const [inventory, setInventory] = useState(saved?.inventory || []);
   const [transactions, setTransactions] = useState(saved?.transactions || []);
-  const [activeLegal, setActiveLegal] = useState(null); // 'privacy' | 'terms' | null
+  const [activeLegal, setActiveLegal] = useState(null);
 
   const t = (key) => TRANSLATIONS[language][key] || key;
   const triggerNotification = (msg) => { setNotification(msg); setTimeout(() => setNotification(null), 3000); };
@@ -311,15 +282,35 @@ const PicoApp = ({ isNodeRunning }) => {
   const handleLogin = async () => {
     setIsAuthenticating(true);
     try {
-      const auth = await PiSDK.authenticate(['username']);
-      setUsername(auth.user.username || 'Guest');
+      let user = { username: "Guest" };
+      // Check if we are in a Pi Browser environment
+      if (window.Pi) {
+        try { 
+          // Race condition to prevent infinite loading if Pi SDK doesn't respond
+          const auth = await Promise.race([
+            window.Pi.authenticate(['username'], ()=>{}),
+            new Promise((_, reject) => setTimeout(() => reject('timeout'), 5000))
+          ]);
+          user = auth.user || user; 
+        } catch (e) {
+          console.warn("Pi Auth skipped/timed out, using demo mode.");
+          // If auth fails or times out (desktop testing), we fall back to a demo user
+          user = { username: "Desktop_User" };
+        }
+      } else { 
+        // No Pi SDK at all (Standard Browser)
+        await PiSDK.authenticateMock(); 
+        user = { username: "Desktop_User" }; 
+      }
+      
+      setUsername(user.username);
       setWalletConnected(true);
-      if (balance === 0) setBalance(1.0);
+      if(balance === 0) setBalance(1.0);
     } catch (e) {
-      triggerNotification('Authentication failed. Please try again.');
       console.error(e);
-    } finally {
-      setIsAuthenticating(false);
+      triggerNotification("Login Failed");
+    } finally { 
+      setIsAuthenticating(false); 
     }
   };
 
@@ -378,6 +369,7 @@ const PicoApp = ({ isNodeRunning }) => {
           transactions={transactions} 
           onOpenPrivacy={() => setActiveLegal('privacy')}
           onOpenTerms={() => setActiveLegal('terms')}
+          KYC_MINING_BOOST={KYC_MINING_BOOST}
         />}
         
         {/* LEGAL MODALS */}
@@ -423,15 +415,10 @@ const PicoApp = ({ isNodeRunning }) => {
       </main>
 
       <nav className="bg-slate-900/95 backdrop-blur border-t border-slate-800 p-2 flex justify-around pb-6 md:pb-2 z-10">
-        {['dashboard', 'mine', 'social', 'market'].map(tab => (
-          <button key={tab} onClick={()=>setActiveTab(tab)} className={`flex flex-col items-center gap-1 p-2 rounded-xl w-16 transition-all ${activeTab===tab ? 'text-indigo-400 -translate-y-1' : 'text-slate-500'}`}>
-            {tab==='dashboard' && <PicoLogo size={22} className={activeTab===tab ? 'drop-shadow-lg' : 'grayscale opacity-50'}/>}
-            {tab==='mine' && <Pickaxe size={22}/>}
-            {tab==='social' && <Users size={22}/>}
-            {tab==='market' && <ShoppingBag size={22}/>}
-            <span className="text-[9px] font-bold uppercase tracking-wide">{t(tab === 'dashboard' ? 'home' : tab)}</span>
-          </button>
-        ))}
+        <NavButton active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} icon={<PicoLogo size={22} className={activeTab === 'dashboard' ? 'drop-shadow-lg' : 'grayscale opacity-50'} />} label={t('home')} />
+        <NavButton active={activeTab === 'mine'} onClick={() => setActiveTab('mine')} icon={<Pickaxe size={22} />} label={t('mine')} />
+        <NavButton active={activeTab === 'social'} onClick={() => setActiveTab('social')} icon={<Users size={22} />} label={t('social')} />
+        <NavButton active={activeTab === 'market'} onClick={() => setActiveTab('market')} icon={<ShoppingBag size={22} />} label={t('market')} />
       </nav>
       {notification && <div className="absolute top-20 left-1/2 -translate-x-1/2 bg-indigo-600 text-white px-4 py-2 rounded-full shadow-xl z-50 text-sm font-bold flex items-center gap-2 animate-in slide-in-from-top-2 fade-in"><CheckCircle2 size={16}/> {notification}</div>}
     </div>
@@ -439,7 +426,7 @@ const PicoApp = ({ isNodeRunning }) => {
 };
 
 // ==========================================
-// ROOT COMPONENT (Responsive Split View)
+// 6. ROOT COMPONENT (Responsive Split View)
 // ==========================================
 export default function PiCoEcosystem() {
   const [nodeActive, setNodeActive] = useState(false);
