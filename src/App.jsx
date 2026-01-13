@@ -133,7 +133,7 @@ const TRANSLATIONS = {
     referral_bonus: "Referral Bonus",
     not_pi_browser: "Molimo otvorite ovu aplikaciju u Pi Browseru."
   },
-  // ... (Ostali jezici ostaju isti)
+  // ... (Ostali jezici ostaju isti - skraćeni radi preglednosti)
   fr: { welcome: "Bienvenue", mine: "Miner", social: "Social", market: "Marché", home: "Accueil", connect_wallet: "Connexion avec Pi", click_enter: "Cliquer pour Entrer", energy: "Énergie", balance: "Solde", start_mining: "Démarrer le Minage", tap_mine: "Appuyez pour Miner", cost_energy: "Coût: 10 Énergie / Clic", invite_friends: "Équipe de Parrainage", invite_desc: "Construisez votre Cercle de Sécurité.", buy: "Acheter", tip: "Pourboire", like: "J'aime", post_placeholder: "Quoi de neuf sur Pi Network ?", items: "objets", miner_level: "Niveau Pionnier", power: "Taux de Minage", active_quests: "Check-list", claim: "Réclamer", leaderboard: "Classement", top_miners: "Meilleurs Pionniers", transactions: "Historique", settings: "Paramètres", profile: "Profil Pi", language: "Langue", change_name: "Nom Vérifié", save: "Sauvegarder", mined: "Miné", bought: "Acheté", reward: "Récompense", sent_tip: "Pourboire envoyé", total_supply: "Offre Totale", circulating: "Part du Réseau", my_inventory: "Actifs", insufficient_funds: "Fonds insuffisants!", wallet_connected: "Authentifié avec Pi Network !", quest_completed: "Quête Terminée !", post_published: "Post publié !", item_bought: "Vous avez acheté", tip_sent: "Vous avez envoyé un pourboire", pi_login_desc: "Authentifiez-vous avec votre compte Pi.", kyc_status: "Statut KYC", kyc_not_started: "Non commencé", kyc_pending: "En attente", kyc_verified: "Vérifié ✅", kyc_start: "Démarrer KYC", kyc_simulating: "Vérification...", kyc_completed: "KYC Vérifié!", mining_boost_kyc: "Boost KYC", enter_referral: "Code de Parrainage", referral_bonus: "Bonus Parrainage", not_pi_browser: "Veuillez ouvrir dans Pi Browser." },
   de: { welcome: "Willkommen", mine: "Minen", social: "Sozial", market: "Markt", home: "Start", connect_wallet: "Mit Pi Anmelden", click_enter: "Klicken zum Betreten", energy: "Energie", balance: "Guthaben", start_mining: "Mining Starten", tap_mine: "Tippen zum Minen", cost_energy: "Kosten: 10 Energie / Klick", invite_friends: "Referral Team", invite_desc: "Baue deinen Sicherheitskreis auf.", buy: "Kaufen", tip: "Trinkgeld", like: "Gefällt mir", post_placeholder: "Was passiert im Pi Network?", items: "Gegenstände", miner_level: "Pioneer Level", power: "Mining Rate", active_quests: "Checkliste", claim: "Beanspruchen", leaderboard: "Bestenliste", top_miners: "Top Pioniere", transactions: "Verlauf", settings: "Einstellungen", profile: "Pi Profil", language: "Sprache", change_name: "Verifizierter Name", save: "Speichern", mined: "Gemint", bought: "Gekauft", reward: "Belohnung", sent_tip: "Trinkgeld gesendet", total_supply: "Gesamtangebot", circulating: "Netzwerkanteil", my_inventory: "Vermögen", insufficient_funds: "Unzureichendes Guthaben!", wallet_connected: "Authentifiziert mit Pi Network!", quest_completed: "Quest Abgeschlossen!", post_published: "Post veröffentlicht!", item_bought: "Du hast gekauft", tip_sent: "Du hast Trinkgeld gesendet", pi_login_desc: "Authentifiziere dich mit deinem Pi Account.", kyc_status: "KYC Status", kyc_not_started: "Nicht gestartet", kyc_pending: "Ausstehend", kyc_verified: "Verifiziert ✅", kyc_start: "KYC Starten", kyc_simulating: "Überprüfung...", kyc_completed: "KYC Verifiziert!", mining_boost_kyc: "KYC Boost", enter_referral: "Empfehlungscode", referral_bonus: "Empfehlungsbonus", not_pi_browser: "Bitte im Pi Browser öffnen." }
 };
@@ -382,16 +382,19 @@ export default function App() {
 
   // --- EFFECTS ---
   useEffect(() => {
-    // Check if running inside Pi Browser
+    // Check if running inside Pi Browser and Initialize SDK
     if (window.Pi) {
       setIsPiBrowser(true);
       try {
-        window.Pi.init({ version: "2.0", sandbox: true }); // Running in SANDBOX (Testnet)
+        // Ovdje postavljamo sandbox: true za Testnet
+        window.Pi.init({ version: "2.0", sandbox: true }); 
+        console.log("Pi SDK Initialized in Sandbox (Testnet) mode");
       } catch (e) {
         console.error("Pi Init Error:", e);
       }
     } else {
       setIsPiBrowser(false);
+      console.log("Pi SDK not found - Running in Desktop/Demo mode");
     }
   }, []);
 
@@ -438,6 +441,7 @@ export default function App() {
           const scopes = ['username', 'payments'];
           const onIncompletePaymentFound = (payment) => {
             console.log("Incomplete payment found", payment);
+            // Handling incomplete payments is required for Pi Apps
           };
 
           // Race condition: Pi Auth vs 5s Timeout
@@ -575,10 +579,17 @@ export default function App() {
               {currentTime.toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' })}
             </p>
           </div>
-          <button onClick={() => setLanguage(language === 'en' ? 'hr' : 'en')} className="flex items-center gap-1 bg-slate-800 px-3 py-1 rounded-full border border-slate-700">
-             <span>{LANGUAGES.find(l => l.code === language).flag}</span>
-             <span className="text-xs font-bold uppercase">{language}</span>
-          </button>
+          <div className="flex flex-col items-end gap-2">
+            {isPiBrowser && (
+              <span className="bg-yellow-500/20 text-yellow-400 text-[10px] font-bold px-2 py-1 rounded border border-yellow-500/50">
+                TESTNET
+              </span>
+            )}
+            <button onClick={() => setLanguage(language === 'en' ? 'hr' : 'en')} className="flex items-center gap-1 bg-slate-800 px-3 py-1 rounded-full border border-slate-700">
+               <span>{LANGUAGES.find(l => l.code === language).flag}</span>
+               <span className="text-xs font-bold uppercase">{language}</span>
+            </button>
+          </div>
         </div>
 
         {/* Center: Interactive Logo */}
