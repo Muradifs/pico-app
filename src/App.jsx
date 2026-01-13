@@ -142,6 +142,9 @@ const LANGUAGES = [
   { code: 'en', label: 'English', flag: '🇬🇧' },
   { code: 'hr', label: 'Hrvatski', flag: '🇭🇷' },
   { code: 'fr', label: 'Français', flag: '🇫🇷' },
+  { code: 'es', label: 'Español', flag: '🇪🇸' },
+  { code: 'pt', label: 'Português', flag: '🇵🇹' },
+  { code: 'it', label: 'Italiano', flag: '🇮🇹' },
   { code: 'de', label: 'Deutsch', flag: '🇩🇪' },
 ];
 
@@ -423,24 +426,42 @@ export default function App() {
     setTransactions(prev => [newTx, ...prev].slice(0, 50));
   };
 
-  // REAL PI AUTHENTICATION
+  // ROBUST AUTHENTICATION WITH TIMEOUT FALLBACK
   const connectWallet = async () => {
-    if (!isPiBrowser) {
-      triggerNotification(t('not_pi_browser'));
-      return;
-    }
-
     setIsAuthenticating(true);
-    try {
-      const scopes = ['username', 'payments'];
-      const onIncompletePaymentFound = (payment) => {
-        console.log("Incomplete payment found", payment);
-        // Handle incomplete payment
-      };
 
-      const auth = await window.Pi.authenticate(scopes, onIncompletePaymentFound);
-      
-      setUsername(auth.user.username);
+    try {
+      let userConfig = { username: "Guest", uid: "guest" };
+
+      if (isPiBrowser) {
+        try {
+          const scopes = ['username', 'payments'];
+          const onIncompletePaymentFound = (payment) => {
+            console.log("Incomplete payment found", payment);
+          };
+
+          // Race condition: Pi Auth vs 5s Timeout
+          const authResult = await Promise.race([
+            window.Pi.authenticate(scopes, onIncompletePaymentFound),
+            new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 5000))
+          ]);
+          
+          userConfig = authResult.user;
+        } catch (e) {
+          console.warn("Pi Auth failed or timed out. Switching to Demo Mode.", e);
+          triggerNotification("Entering Demo Mode (Auth Issue)");
+          // Fallback data
+          userConfig = { username: "Test_Pioneer", uid: "test_123" };
+        }
+      } else {
+        // Not in Pi Browser - Demo Mode
+        triggerNotification("Desktop Detected. Demo Mode Active.");
+        userConfig = { username: "Desktop_User", uid: "desktop_123" };
+        await new Promise(r => setTimeout(r, 1000));
+      }
+
+      // Login Success Logic
+      setUsername(userConfig.username);
       setUserAvatar('🥧');
       setWalletConnected(true);
 
@@ -461,8 +482,8 @@ export default function App() {
       }
 
     } catch (err) {
-      console.error("Auth Failed", err);
-      triggerNotification("Authentication Failed. Try again.");
+      console.error("Critical Login Error", err);
+      triggerNotification("Login Failed. Try again.");
     } finally {
       setIsAuthenticating(false);
     }
@@ -582,7 +603,7 @@ export default function App() {
           <div className="w-full max-w-xs space-y-2">
             {!isPiBrowser && (
               <div className="bg-red-500/20 border border-red-500/50 p-2 rounded text-center text-xs text-red-200 mb-2">
-                Not detected in Pi Browser. Login may fail.
+                Not detected in Pi Browser. Login will use Demo Mode.
               </div>
             )}
             <input
